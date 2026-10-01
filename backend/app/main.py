@@ -56,7 +56,23 @@ def create_app(
     app.state.clock = clock
     app.middleware("http")(_attach_request_id)
     _register_exception_handlers(app)
+    _include_routers(app)
     return app
+
+
+def _include_routers(app: FastAPI) -> None:
+    """Attach the identity, consultation, and note routes.
+
+    Imported here so those modules can import ``respond`` from this one
+    without a cycle while this module is still loading.
+    """
+    from app.routers.consultation_router import router as consultation_router
+    from app.routers.identity_router import router as identity_router
+    from app.routers.note_router import router as note_router
+
+    app.include_router(identity_router)
+    app.include_router(consultation_router)
+    app.include_router(note_router)
 
 
 def respond(request: Request, message: str, data: object = None) -> JSONResponse:

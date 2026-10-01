@@ -33,7 +33,11 @@ from app.services.identity_service import IdentityService
 from app.services.note_service import NoteService
 
 # auto_error is off so a missing header becomes our 401, not FastAPI's 403.
-_bearer = HTTPBearer(auto_error=False)
+_bearer = HTTPBearer(
+    auto_error=False,
+    scheme_name="Ticket",
+    description="Ticket from POST /auth/login. Send it as Authorization: Bearer <ticket>.",
+)
 
 
 def set_database(app: FastAPI, database: DatabaseManager) -> None:

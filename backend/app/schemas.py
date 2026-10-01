@@ -135,6 +135,19 @@ class UniformResponse(BaseModel, Generic[DataT]):
         return self
 
 
+class ServiceInfo(ResponseModel):
+    """Payload of ``GET /``."""
+
+    name: str
+    version: str
+
+
+class HealthStatus(ResponseModel):
+    """Payload of ``GET /health``. ``status`` is ``ok`` while this process is serving."""
+
+    status: str
+
+
 class LoginRequest(RequestModel):
     """Body of ``POST /auth/login``. The id comes from the sign-in picker."""
 

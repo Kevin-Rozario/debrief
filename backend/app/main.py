@@ -26,11 +26,75 @@ from app.exceptions import (
     InputValidationError,
     ResourceNotFoundError,
 )
-from app.schemas import ErrorBody, ErrorDetail, ResponseMeta, UniformResponse
+from app.schemas import (
+    ErrorBody,
+    ErrorDetail,
+    HealthStatus,
+    ResponseMeta,
+    ServiceInfo,
+    UniformResponse,
+)
 
 logger = logging.getLogger(__name__)
 
 API_VERSION = "1.0.0"
+API_SUMMARY = "Book a consultation, then share the practitioner's note."
+API_DESCRIPTION = """
+Debrief lets a **client** book a consultation with a **practitioner**. After the
+session the practitioner may write a **note**. The client can read that note
+only after it has been shared.
+
+There is no password. `GET /people` lists the people who can sign in.
+`POST /auth/login` accepts a person id and returns a ticket. Every later
+request sends `Authorization: Bearer <ticket>`.
+
+Every body is one envelope:
+
+* `success` and `message` say what happened.
+* `data` is the payload, or null when a success has nothing to return.
+* `error` is null on success. On failure it carries `code`, `status`, and `details`.
+* `meta.request_id` is also the `X-Request-ID` header.
+* `meta.timestamp` is UTC and ends with `Z`.
+
+A missing resource, someone else's consultation, and a note the client is not
+allowed to see are all **404** with the same message. Times are stored and
+returned in UTC.
+""".strip()
+OPENAPI_TAGS = [
+    {
+        "name": "System",
+        "description": "Name, version, and liveness. No ticket is required.",
+    },
+    {
+        "name": "Identity",
+        "description": (
+            "Sign-in picker, tickets, and the practitioner list. "
+            "People and login need no ticket. Only a client may list practitioners."
+        ),
+    },
+    {
+        "name": "Consultations",
+        "description": (
+            "Book, list, read, cancel, and complete. "
+            "Only the two people on a consultation can see it."
+        ),
+    },
+    {
+        "name": "Notes",
+        "description": (
+            "One note on a completed consultation. Sharing locks the original text. "
+            "Corrections are dated addenda."
+        ),
+    },
+]
+_ERROR_RESPONSES = {
+    401: "Missing or unknown sign-in ticket.",
+    403: "The caller can see the resource but their role may not do this.",
+    404: "Missing, belonging to someone else, or still private. These look the same.",
+    409: "Wrong state, too early, already shared, or the practitioner's time overlaps.",
+    422: "The input is invalid.",
+    500: "Unexpected failure.",
+}
 _LOCATION_PREFIXES = frozenset({"body", "query", "path", "header", "cookie"})
 
 
@@ -52,7 +116,15 @@ def create_app(
         yield
         database.dispose()
 
-    app = FastAPI(title="Debrief", version=API_VERSION, lifespan=lifespan)
+    app = FastAPI(
+        title="Debrief",
+        summary=API_SUMMARY,
+        description=API_DESCRIPTION,
+        version=API_VERSION,
+        openapi_tags=OPENAPI_TAGS,
+        servers=[{"url": "http://127.0.0.1:4000", "description": "Local server from make api."}],
+        lifespan=lifespan,
+    )
     set_database(app, database)
     app.state.clock = clock
     app.middleware("http")(_attach_request_id)
@@ -74,8 +146,30 @@ def _include_routers(app: FastAPI) -> None:
     app.include_router(identity_router)
     app.include_router(consultation_router)
     app.include_router(note_router)
-    app.add_api_route("/", root, methods=["GET"])
-    app.add_api_route("/health", health, methods=["GET"])
+    app.add_api_route(
+        "/",
+        root,
+        methods=["GET"],
+        tags=["System"],
+        summary="API name and version",
+        response_model=UniformResponse[ServiceInfo],
+    )
+    app.add_api_route(
+        "/health",
+        health,
+        methods=["GET"],
+        tags=["System"],
+        summary="Health check",
+        response_model=UniformResponse[HealthStatus],
+    )
+
+
+def error_responses(*statuses: int) -> dict[int, dict[str, object]]:
+    """OpenAPI entries for the failure envelope. Every error uses that same shape."""
+    return {
+        status: {"model": UniformResponse[None], "description": _ERROR_RESPONSES[status]}
+        for status in statuses
+    }
 
 
 def root(request: Request) -> JSONResponse:

@@ -24,6 +24,34 @@ def test_root_and_health_need_no_ticket(api: Api) -> None:
     assert health["data"] == {"status": "ok"}
 
 
+def test_openapi_describes_the_envelope_and_the_ticket(api: Api) -> None:
+    document = api.client.get("/openapi.json").json()
+    info = document["info"]
+
+    assert info["title"] == "Debrief"
+    assert info["version"] == "1.0.0"
+    assert info["summary"] == "Book a consultation, then share the practitioner's note."
+    assert "Authorization: Bearer <ticket>" in info["description"]
+    assert {tag["name"] for tag in document["tags"]} == {
+        "System",
+        "Identity",
+        "Consultations",
+        "Notes",
+    }
+    assert document["servers"] == [
+        {"url": "http://127.0.0.1:4000", "description": "Local server from make api."}
+    ]
+    assert "security" not in document["paths"]["/people"]["get"]
+    assert document["paths"]["/practitioners"]["get"]["security"] == [{"Ticket": []}]
+    assert document["components"]["securitySchemes"]["Ticket"]["scheme"] == "bearer"
+    login_error = document["paths"]["/auth/login"]["post"]["responses"]["422"]
+    assert login_error["description"] == "The input is invalid."
+    assert login_error["content"]["application/json"]["schema"]["$ref"].endswith(
+        "UniformResponse_NoneType_"
+    )
+    assert "HTTPValidationError" not in api.client.get("/openapi.json").text
+
+
 def test_people_list_needs_no_ticket_and_hides_specialty(api: Api) -> None:
     anonymous = expect_ok(api.client.get("/people"))
     response = api.client.get("/people", headers={"Authorization": "Bearer not-a-ticket"})

@@ -8,13 +8,25 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.dependencies import CurrentPerson, NoteServiceDep
-from app.main import respond
-from app.schemas import CreateAddendumRequest, CreateNoteRequest, UpdateNoteRequest
+from app.main import error_responses, respond
+from app.schemas import (
+    AddendumResponse,
+    CreateAddendumRequest,
+    CreateNoteRequest,
+    NoteResponse,
+    UniformResponse,
+    UpdateNoteRequest,
+)
 
-router = APIRouter()
+router = APIRouter(tags=["Notes"])
 
 
-@router.get("/consultations/{consultation_id}/note")
+@router.get(
+    "/consultations/{consultation_id}/note",
+    summary="Read a note",
+    response_model=UniformResponse[NoteResponse],
+    responses=error_responses(401, 404, 422),
+)
 def get_note(
     consultation_id: int,
     request: Request,
@@ -25,7 +37,12 @@ def get_note(
     return respond(request, "Note retrieved.", notes.get(caller, consultation_id))
 
 
-@router.post("/consultations/{consultation_id}/note")
+@router.post(
+    "/consultations/{consultation_id}/note",
+    summary="Create a draft note",
+    response_model=UniformResponse[NoteResponse],
+    responses=error_responses(401, 403, 404, 409, 422),
+)
 def create_note(
     consultation_id: int,
     request: Request,
@@ -38,7 +55,12 @@ def create_note(
     return respond(request, "Note created.", created)
 
 
-@router.patch("/consultations/{consultation_id}/note")
+@router.patch(
+    "/consultations/{consultation_id}/note",
+    summary="Edit a draft note",
+    response_model=UniformResponse[NoteResponse],
+    responses=error_responses(401, 403, 404, 409, 422),
+)
 def update_note(
     consultation_id: int,
     request: Request,
@@ -51,7 +73,12 @@ def update_note(
     return respond(request, "Note updated.", updated)
 
 
-@router.delete("/consultations/{consultation_id}/note")
+@router.delete(
+    "/consultations/{consultation_id}/note",
+    summary="Delete a draft note",
+    response_model=UniformResponse[None],
+    responses=error_responses(401, 403, 404, 409, 422),
+)
 def delete_note(
     consultation_id: int,
     request: Request,
@@ -63,7 +90,12 @@ def delete_note(
     return respond(request, "Note deleted.")
 
 
-@router.post("/consultations/{consultation_id}/note/share")
+@router.post(
+    "/consultations/{consultation_id}/note/share",
+    summary="Share a note",
+    response_model=UniformResponse[NoteResponse],
+    responses=error_responses(401, 403, 404, 409, 422),
+)
 def share_note(
     consultation_id: int,
     request: Request,
@@ -74,7 +106,12 @@ def share_note(
     return respond(request, "Note shared.", notes.share(caller, consultation_id))
 
 
-@router.post("/consultations/{consultation_id}/note/addenda")
+@router.post(
+    "/consultations/{consultation_id}/note/addenda",
+    summary="Add an addendum",
+    response_model=UniformResponse[AddendumResponse],
+    responses=error_responses(401, 403, 404, 409, 422),
+)
 def add_addendum(
     consultation_id: int,
     request: Request,

@@ -8,19 +8,34 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.dependencies import CurrentPerson, IdentityServiceDep
-from app.main import respond
-from app.schemas import LoginRequest
+from app.main import error_responses, respond
+from app.schemas import (
+    LoginRequest,
+    PersonResponse,
+    PractitionerResponse,
+    TokenResponseData,
+    UniformResponse,
+)
 
-router = APIRouter()
+router = APIRouter(tags=["Identity"])
 
 
-@router.get("/people")
+@router.get(
+    "/people",
+    summary="List people",
+    response_model=UniformResponse[list[PersonResponse]],
+)
 def list_people(request: Request, identity: IdentityServiceDep) -> JSONResponse:
     """Everyone, for the sign-in picker."""
     return respond(request, "People listed.", identity.list_people())
 
 
-@router.post("/auth/login")
+@router.post(
+    "/auth/login",
+    summary="Sign in",
+    response_model=UniformResponse[TokenResponseData],
+    responses=error_responses(422),
+)
 def login(
     request: Request,
     body: LoginRequest,
@@ -30,7 +45,12 @@ def login(
     return respond(request, "Signed in.", identity.login(body.person_id))
 
 
-@router.get("/practitioners")
+@router.get(
+    "/practitioners",
+    summary="List practitioners",
+    response_model=UniformResponse[list[PractitionerResponse]],
+    responses=error_responses(401, 403),
+)
 def list_practitioners(
     request: Request,
     caller: CurrentPerson,

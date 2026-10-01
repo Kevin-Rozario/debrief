@@ -8,13 +8,23 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.dependencies import ConsultationServiceDep, CurrentPerson
-from app.main import respond
-from app.schemas import BookConsultationRequest
+from app.main import error_responses, respond
+from app.schemas import (
+    BookConsultationRequest,
+    ConsultationDetailResponse,
+    ConsultationResponse,
+    UniformResponse,
+)
 
-router = APIRouter()
+router = APIRouter(tags=["Consultations"])
 
 
-@router.post("/consultations")
+@router.post(
+    "/consultations",
+    summary="Book a consultation",
+    response_model=UniformResponse[ConsultationResponse],
+    responses=error_responses(401, 403, 409, 422),
+)
 def book_consultation(
     request: Request,
     booking: BookConsultationRequest,
@@ -31,7 +41,12 @@ def book_consultation(
     return respond(request, "Consultation booked.", consultation)
 
 
-@router.get("/consultations")
+@router.get(
+    "/consultations",
+    summary="List consultations",
+    response_model=UniformResponse[list[ConsultationResponse]],
+    responses=error_responses(401),
+)
 def list_consultations(
     request: Request,
     caller: CurrentPerson,
@@ -41,7 +56,12 @@ def list_consultations(
     return respond(request, "Consultations listed.", consultations.list_consultations(caller))
 
 
-@router.get("/consultations/{consultation_id}")
+@router.get(
+    "/consultations/{consultation_id}",
+    summary="Read a consultation",
+    response_model=UniformResponse[ConsultationDetailResponse],
+    responses=error_responses(401, 404, 422),
+)
 def get_consultation(
     consultation_id: int,
     request: Request,
@@ -52,7 +72,12 @@ def get_consultation(
     return respond(request, "Consultation retrieved.", consultations.get(caller, consultation_id))
 
 
-@router.post("/consultations/{consultation_id}/cancel")
+@router.post(
+    "/consultations/{consultation_id}/cancel",
+    summary="Cancel a consultation",
+    response_model=UniformResponse[ConsultationResponse],
+    responses=error_responses(401, 404, 409, 422),
+)
 def cancel_consultation(
     consultation_id: int,
     request: Request,
@@ -64,7 +89,12 @@ def cancel_consultation(
     return respond(request, "Consultation cancelled.", consultation)
 
 
-@router.post("/consultations/{consultation_id}/complete")
+@router.post(
+    "/consultations/{consultation_id}/complete",
+    summary="Complete a consultation",
+    response_model=UniformResponse[ConsultationResponse],
+    responses=error_responses(401, 403, 404, 409, 422),
+)
 def complete_consultation(
     consultation_id: int,
     request: Request,

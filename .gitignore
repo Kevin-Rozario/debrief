@@ -22,3 +22,7 @@ npm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Misc
+CLAUDE.md
+PRD.md

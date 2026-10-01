@@ -13,6 +13,17 @@ NOT_FOUND = "The requested resource was not found."
 TICKET_REQUIRED = "A valid sign-in ticket is required."
 
 
+def test_root_and_health_need_no_ticket(api: Api) -> None:
+    root = expect_ok(api.client.get("/"))
+    health = expect_ok(api.client.get("/health"))
+
+    assert root["message"] == "Debrief API."
+    assert root["data"] == {"name": "Debrief", "version": "1.0.0"}
+    assert root["meta"]["timestamp"] == zulu(api.clock.now())
+    assert health["message"] == "Healthy."
+    assert health["data"] == {"status": "ok"}
+
+
 def test_people_list_needs_no_ticket_and_hides_specialty(api: Api) -> None:
     anonymous = expect_ok(api.client.get("/people"))
     response = api.client.get("/people", headers={"Authorization": "Bearer not-a-ticket"})

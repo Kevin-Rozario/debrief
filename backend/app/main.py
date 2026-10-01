@@ -30,6 +30,7 @@ from app.schemas import ErrorBody, ErrorDetail, ResponseMeta, UniformResponse
 
 logger = logging.getLogger(__name__)
 
+API_VERSION = "1.0.0"
 _LOCATION_PREFIXES = frozenset({"body", "query", "path", "header", "cookie"})
 
 
@@ -51,7 +52,7 @@ def create_app(
         yield
         database.dispose()
 
-    app = FastAPI(title="Debrief", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="Debrief", version=API_VERSION, lifespan=lifespan)
     set_database(app, database)
     app.state.clock = clock
     app.middleware("http")(_attach_request_id)
@@ -61,7 +62,7 @@ def create_app(
 
 
 def _include_routers(app: FastAPI) -> None:
-    """Attach the identity, consultation, and note routes.
+    """Attach the identity, consultation, and note routes, plus ``/`` and ``/health``.
 
     Imported here so those modules can import ``respond`` from this one
     without a cycle while this module is still loading.
@@ -73,6 +74,18 @@ def _include_routers(app: FastAPI) -> None:
     app.include_router(identity_router)
     app.include_router(consultation_router)
     app.include_router(note_router)
+    app.add_api_route("/", root, methods=["GET"])
+    app.add_api_route("/health", health, methods=["GET"])
+
+
+def root(request: Request) -> JSONResponse:
+    """The API name and version. No ticket is required."""
+    return respond(request, "Debrief API.", {"name": "Debrief", "version": API_VERSION})
+
+
+def health(request: Request) -> JSONResponse:
+    """Liveness check. No ticket is required."""
+    return respond(request, "Healthy.", {"status": "ok"})
 
 
 def respond(request: Request, message: str, data: object = None) -> JSONResponse:

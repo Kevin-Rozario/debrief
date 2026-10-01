@@ -8,13 +8,11 @@ from sqlalchemy import event
 from sqlalchemy.engine import URL, Engine
 from sqlmodel import Session, SQLModel, create_engine
 
-from app import models  # noqa: F401  (importing registers the tables on SQLModel.metadata)
+from app import models  # noqa: F401  (registers tables on SQLModel.metadata)
 
-# backend/debrief.db, resolved from this file's location so it is the same
-# no matter which folder the server is started from.
+# Resolved from this file so the path does not depend on the working directory.
 DEFAULT_DATABASE_PATH: Path = Path(__file__).resolve().parent.parent / "debrief.db"
 
-# Name of the execution option used to ask for a particular kind of BEGIN.
 SQLITE_BEGIN_MODE_OPTION = "sqlite_begin_mode"
 
 
@@ -40,10 +38,9 @@ class DatabaseManager:
             url,
             echo=echo,
             connect_args={
-                # FastAPI runs request code in a thread pool, so a connection may
-                # be used from a different thread than the one that created it.
+                # Handlers run on a different thread than the one that opened the connection.
                 "check_same_thread": False,
-                # How long a request waits for another request's write lock.
+                # Seconds a writer waits for another writer's lock.
                 "timeout": busy_timeout_seconds,
             },
         )
@@ -51,6 +48,7 @@ class DatabaseManager:
 
     @property
     def engine(self) -> Engine:
+        """The SQLite engine this manager opened."""
         return self._engine
 
     def create_tables(self) -> None:
@@ -79,18 +77,16 @@ class DatabaseManager:
 
         @event.listens_for(engine, "connect")
         def on_connect(dbapi_connection, _connection_record) -> None:
-            # Stop the sqlite3 driver from deciding when a transaction begins;
-            # we emit BEGIN ourselves in on_begin below.
+            # The driver must not emit BEGIN. on_begin does.
             dbapi_connection.isolation_level = None
-            # SQLite ignores foreign keys unless this is switched on per connection.
+            # SQLite enforces foreign keys only when this is set on each connection.
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
 
         @event.listens_for(engine, "begin")
         def on_begin(connection) -> None:
-            # Ordinary transactions begin DEFERRED. A transaction that was
-            # requested through begin_write_transaction() begins IMMEDIATE.
+            # DEFERRED unless begin_write_transaction asked for IMMEDIATE.
             requested = connection.get_execution_options().get(
                 SQLITE_BEGIN_MODE_OPTION, SqliteBeginMode.DEFERRED
             )

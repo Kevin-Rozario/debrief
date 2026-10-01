@@ -44,24 +44,30 @@ class UtcDateTime(TypeDecorator):
         return value.replace(tzinfo=UTC)
 
 
-# Enumerations
 class PersonRole(StrEnum):
+    """A person has one role: client or practitioner."""
+
     CLIENT = "client"
     PRACTITIONER = "practitioner"
 
 
 class ConsultationStatus(StrEnum):
+    """scheduled, then completed or cancelled. Both later states are final."""
+
     SCHEDULED = "scheduled"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
 
-# Shared timestamp columns
 class CreatedAtMixin(SQLModel):
+    """created_at on every table, stored as UTC."""
+
     created_at: datetime = Field(default_factory=_utc_now, sa_type=UtcDateTime)
 
 
 class TimestampMixin(CreatedAtMixin):
+    """created_at plus updated_at. updated_at moves on each ORM update."""
+
     updated_at: datetime = Field(
         default_factory=_utc_now,
         sa_type=UtcDateTime,
@@ -69,14 +75,15 @@ class TimestampMixin(CreatedAtMixin):
     )
 
 
-# Tables
 class Person(CreatedAtMixin, table=True):
+    """A client or a practitioner. Specialty is display-only and used for practitioners."""
+
     __tablename__ = "person"
 
     id: int | None = Field(default=None, primary_key=True)
     name: str
     role: PersonRole
-    specialty: str | None = Field(default=None)  # display-only, practitioners only
+    specialty: str | None = Field(default=None)
 
 
 class AuthToken(CreatedAtMixin, table=True):
@@ -90,6 +97,8 @@ class AuthToken(CreatedAtMixin, table=True):
 
 
 class Consultation(TimestampMixin, table=True):
+    """One booked session. cancelled_by_id is set when the session is cancelled."""
+
     __tablename__ = "consultation"
 
     id: int | None = Field(default=None, primary_key=True)
@@ -110,20 +119,24 @@ class Consultation(TimestampMixin, table=True):
 
 
 class Note(TimestampMixin, table=True):
+    """One note for one consultation. shared_at stays empty while the draft is private."""
+
     __tablename__ = "note"
 
     id: int | None = Field(default=None, primary_key=True)
-    # unique=True enforces "one note per consultation" in the database itself.
     consultation_id: int = Field(foreign_key="consultation.id", unique=True)
     body: str
     shared_at: datetime | None = Field(default=None, sa_type=UtcDateTime)
 
     @property
     def is_shared(self) -> bool:
+        """True after the practitioner shares the note. Sharing is permanent."""
         return self.shared_at is not None
 
 
 class Addendum(TimestampMixin, table=True):
+    """A dated correction on a shared note. The API never edits or deletes one."""
+
     __tablename__ = "addendum"
 
     id: int | None = Field(default=None, primary_key=True)

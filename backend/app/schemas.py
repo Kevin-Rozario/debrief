@@ -54,14 +54,14 @@ def _require_note_text(value: str) -> str:
     return stripped
 
 
-# Aware UTC on the way in; a trailing "Z" on the way out to JSON.
+# Aware UTC on input. JSON uses a trailing Z.
 UtcDateTime = Annotated[
     datetime,
     AfterValidator(_require_aware_utc),
     PlainSerializer(_dump_utc, return_type=str, when_used="json"),
 ]
 
-# Stored text is the stripped value, so a body of spaces is a validation error.
+# Stored value is stripped. Whitespace alone is invalid.
 NoteText = Annotated[str, AfterValidator(_require_note_text)]
 
 
@@ -82,7 +82,6 @@ class ResponseModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Envelope
 class ErrorDetail(BaseModel):
     """One field-level problem. Populated for validation errors, otherwise unused."""
 
@@ -128,6 +127,7 @@ class UniformResponse(BaseModel, Generic[DataT]):
 
     @model_validator(mode="after")
     def success_matches_error(self) -> Self:
+        """A success carries no error. A failure carries an error and no data."""
         if self.success and self.error is not None:
             raise ValueError("A successful response cannot include an error.")
         if not self.success and (self.error is None or self.data is not None):
@@ -135,7 +135,6 @@ class UniformResponse(BaseModel, Generic[DataT]):
         return self
 
 
-# Identity
 class LoginRequest(RequestModel):
     """Body of ``POST /auth/login``. The id comes from the sign-in picker."""
 
@@ -171,7 +170,6 @@ class PractitionerResponse(ResponseModel):
     specialty: str | None
 
 
-# Consultations
 class BookConsultationRequest(RequestModel):
     """Body of ``POST /consultations``.
 
@@ -189,6 +187,7 @@ class BookConsultationRequest(RequestModel):
     @field_validator("ends_at")
     @classmethod
     def end_is_after_start(cls, ends_at: datetime, info: ValidationInfo) -> datetime:
+        """Refuse an end that is not strictly after the start."""
         starts_at = info.data.get("starts_at")
         if isinstance(starts_at, datetime) and ends_at <= starts_at:
             raise ValueError("Must be strictly after starts_at.")
@@ -212,7 +211,6 @@ class ConsultationResponse(ResponseModel):
     cancelled_by_id: int | None
 
 
-# Notes and addenda
 class CreateNoteRequest(RequestModel):
     """Body of ``POST /consultations/{id}/note``. Creates a private draft."""
 

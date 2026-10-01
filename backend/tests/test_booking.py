@@ -89,6 +89,34 @@ def test_the_end_must_be_strictly_after_the_start(api: Api) -> None:
 
     assert field_message(payload, "ends_at") == "Must be strictly after starts_at."
 
+    earlier = api.client.post(
+        "/consultations",
+        headers=api.priya,
+        json={
+            "practitioner_id": api.asha_id,
+            "starts_at": zulu(starts_at),
+            "ends_at": zulu(starts_at - timedelta(minutes=1)),
+        },
+    )
+    earlier_payload = expect_error(earlier, 422, "VALIDATION_ERROR", INVALID)
+    assert field_message(earlier_payload, "ends_at") == "Must be strictly after starts_at."
+
+
+def test_offset_times_are_stored_as_utc(api: Api) -> None:
+    response = api.client.post(
+        "/consultations",
+        headers=api.priya,
+        json={
+            "practitioner_id": api.asha_id,
+            "starts_at": "2026-10-02T14:30:00+05:30",
+            "ends_at": "2026-10-02T15:30:00+05:30",
+        },
+    )
+    consultation = expect_ok(response)["data"]
+
+    assert consultation["starts_at"] == "2026-10-02T09:00:00Z"
+    assert consultation["ends_at"] == "2026-10-02T10:00:00Z"
+
 
 def test_naive_datetimes_are_rejected(api: Api) -> None:
     response = api.client.post(
@@ -103,6 +131,7 @@ def test_naive_datetimes_are_rejected(api: Api) -> None:
     payload = expect_error(response, 422, "VALIDATION_ERROR", INVALID)
 
     assert field_message(payload, "starts_at") == "Datetime values must be timezone-aware (UTC)."
+    assert field_message(payload, "ends_at") == "Datetime values must be timezone-aware (UTC)."
 
 
 def test_the_client_id_cannot_be_sent_in_the_body(api: Api) -> None:
@@ -132,12 +161,34 @@ def test_an_overlapping_scheduled_consultation_is_refused(api: Api) -> None:
         ends_at + timedelta(minutes=30),
     )
 
-    expect_error(
+    payload = expect_error(
         overlap,
         409,
         "SCHEDULING_CONFLICT",
         "The practitioner already has a consultation at that time.",
     )
+    assert payload["error"]["details"] == []
+    assert payload["meta"]["timestamp"] == zulu(api.clock.now())
+
+
+def test_a_window_that_covers_or_sits_inside_a_booking_is_refused(api: Api) -> None:
+    starts_at, ends_at = api.window()
+    api.book_ok(starts_at=starts_at, ends_at=ends_at)
+    covering = api.book(
+        api.rohan,
+        api.asha_id,
+        starts_at - timedelta(minutes=30),
+        ends_at + timedelta(minutes=30),
+    )
+    inside = api.book(
+        api.rohan,
+        api.asha_id,
+        starts_at + timedelta(minutes=15),
+        ends_at - timedelta(minutes=15),
+    )
+
+    for response in (covering, inside):
+        expect_error(response, 409, "SCHEDULING_CONFLICT")
 
 
 def test_a_booking_that_starts_when_another_ends_is_allowed(api: Api) -> None:

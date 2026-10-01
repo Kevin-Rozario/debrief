@@ -7,9 +7,16 @@ The exact start moment counts. A finished consultation cannot be finished again.
 
 from datetime import timedelta
 
-from tests.conftest import Api, expect_error, expect_ok, zulu
+from tests.conftest import Api, expect_error, expect_ok, field_message, zulu
 
 NOT_SCHEDULED = "This consultation is no longer scheduled."
+
+
+def test_a_consultation_id_must_be_an_integer(api: Api) -> None:
+    response = api.client.get("/consultations/not-a-number", headers=api.priya)
+    payload = expect_error(response, 422, "VALIDATION_ERROR")
+
+    assert field_message(payload, "consultation_id")
 
 
 def test_the_caller_lists_and_reads_their_own_consultations(api: Api) -> None:

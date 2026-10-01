@@ -145,6 +145,11 @@ def test_seed_covers_each_consultation_state(seeded) -> None:
         409,
         "CONSULTATION_NOT_STARTED",
     )
+    cancelled_future = expect_ok(
+        client.post(f"/consultations/{future['id']}/cancel", headers=priya)
+    )["data"]
+    assert cancelled_future["status"] == "cancelled"
+    assert cancelled_future["cancelled_by_id"] == ids["Priya"]
     completed = expect_ok(client.post(f"/consultations/{past['id']}/complete", headers=asha))
     assert completed["data"]["status"] == "completed"
 

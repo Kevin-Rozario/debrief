@@ -15,6 +15,37 @@ INVALID = "The request contains invalid data."
 EMPTY = "Must not be empty or whitespace."
 
 
+def test_a_missing_note_is_not_found_for_the_practitioner(api: Api) -> None:
+    consultation_id = api.schedule_and_complete()
+    missing = expect_error(
+        api.client.get("/consultations/999999/note", headers=api.asha),
+        404,
+        "RESOURCE_NOT_FOUND",
+        NOT_FOUND,
+    )
+    note = {"body": "Nothing here"}
+    for response in (
+        api.client.get(f"/consultations/{consultation_id}/note", headers=api.asha),
+        api.client.patch(
+            f"/consultations/{consultation_id}/note",
+            headers=api.asha,
+            json=note,
+        ),
+        api.client.delete(f"/consultations/{consultation_id}/note", headers=api.asha),
+        api.client.post(f"/consultations/{consultation_id}/note/share", headers=api.asha),
+        api.client.post(
+            f"/consultations/{consultation_id}/note/addenda",
+            headers=api.asha,
+            json=note,
+        ),
+    ):
+        payload = expect_error(response, 404, "RESOURCE_NOT_FOUND", NOT_FOUND)
+        assert payload["message"] == missing["message"]
+
+    detail = expect_ok(api.client.get(f"/consultations/{consultation_id}", headers=api.asha))
+    assert detail["data"]["note"] is None
+
+
 def test_a_note_can_be_written_only_on_a_completed_consultation(api: Api) -> None:
     scheduled_id, _starts_at, _ends_at = api.book_ok()
     expect_error(
@@ -261,3 +292,35 @@ def test_sharing_locks_the_note_and_addenda_stay_visible(api: Api) -> None:
         ),
     ):
         expect_error(response, 403, "PERMISSION_DENIED")
+
+
+def test_an_addendum_cannot_be_edited_or_deleted(api: Api) -> None:
+    consultation_id = api.schedule_and_complete()
+    expect_ok(api.create_note(consultation_id, "Original"))
+    expect_ok(api.client.post(f"/consultations/{consultation_id}/note/share", headers=api.asha))
+    created = expect_ok(
+        api.client.post(
+            f"/consultations/{consultation_id}/note/addenda",
+            headers=api.asha,
+            json={"body": "Keep this wording"},
+        )
+    )["data"]
+
+    for response in (
+        api.client.patch(
+            f"/consultations/{consultation_id}/note/addenda/{created['id']}",
+            headers=api.asha,
+            json={"body": "Quiet change"},
+        ),
+        api.client.delete(
+            f"/consultations/{consultation_id}/note/addenda/{created['id']}",
+            headers=api.asha,
+        ),
+    ):
+        expect_error(response, 404, "RESOURCE_NOT_FOUND", NOT_FOUND)
+
+    visible = expect_ok(
+        api.client.get(f"/consultations/{consultation_id}/note", headers=api.priya)
+    )["data"]
+    assert visible["body"] == "Original"
+    assert [item["body"] for item in visible["addenda"]] == ["Keep this wording"]

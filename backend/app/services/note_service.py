@@ -10,6 +10,8 @@ The practitioner of that consultation is the only person who can change a note.
 Once it is shared, the body is locked and corrections are addenda.
 """
 
+import sqlite3
+
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
@@ -43,9 +45,7 @@ class NoteService:
         """The note this caller is allowed to read. A hidden draft is not found."""
         consultation = require_participant(self._consultations.get(consultation_id), caller)
         note = self._load_note(consultation)
-        if _hides_note(caller, consultation, note):
-            raise ResourceNotFoundError()
-        if note is None:
+        if note is None or _hides_note(caller, consultation, note):
             raise ResourceNotFoundError()
         return to_note_response(note, self._notes)
 
@@ -69,8 +69,10 @@ class NoteService:
         try:
             self._notes.add(note)
             self._session.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             self._session.rollback()
+            if not _is_duplicate_note(exc):
+                raise
             raise NoteAlreadyExistsError() from None
         return to_note_response(note, self._notes)
 
@@ -199,8 +201,9 @@ def visible_note(
 
 
 def to_note_response(note: Note, notes: NoteRepository) -> NoteResponse:
-    """The public note, including its addenda oldest first."""
+    """The public note. Addenda are loaded only after the note is shared."""
     note_id = _row_id(note.id)
+    rows = () if not note.is_shared else notes.list_addenda(note_id)
     return NoteResponse(
         id=note_id,
         consultation_id=note.consultation_id,
@@ -214,9 +217,19 @@ def to_note_response(note: Note, notes: NoteRepository) -> NoteResponse:
                 body=item.body,
                 created_at=item.created_at,
             )
-            for item in notes.list_addenda(note_id)
+            for item in rows
         ],
     )
+
+
+def _is_duplicate_note(exc: IntegrityError) -> bool:
+    """True when SQLite rejected a second note for the same consultation."""
+    original = exc.orig
+    if not isinstance(original, sqlite3.IntegrityError):
+        return False
+    if original.sqlite_errorcode != sqlite3.SQLITE_CONSTRAINT_UNIQUE:
+        return False
+    return "note.consultation_id" in str(original)
 
 
 def _hides_note(caller: Person, consultation: Consultation, note: Note | None) -> bool:

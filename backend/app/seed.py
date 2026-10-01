@@ -25,7 +25,6 @@ from app.models import (
     PersonRole,
 )
 
-# Shifts from the clock's current hour. Each consultation lasts one hour.
 PAST_SCHEDULED_OFFSET = timedelta(days=-1)
 FUTURE_SCHEDULED_OFFSET = timedelta(days=7)
 DRAFT_OFFSET = timedelta(days=-5)
@@ -130,8 +129,7 @@ def _load(session: Session, now: datetime) -> None:
         status=ConsultationStatus.CANCELLED,
         cancelled_by_id=priya,
     )
-    # Rohan and Dr. Vikram Shah. Priya is not on it, and the hour is still
-    # scheduled, so a new booking with Dr. Vikram Shah in that hour overlaps.
+    # Rohan with Dr. Vikram Shah, still scheduled. Priya is not on it, so that hour overlaps.
     _consultation(
         session,
         client_id=rohan,

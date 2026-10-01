@@ -65,7 +65,6 @@ class DomainError(Exception):
         super().__init__(self.message)
 
 
-# 401 / 403 / 404
 class AuthenticationRequiredError(DomainError):
     """The request carries no ticket, or the ticket is not recognised."""
 
@@ -93,7 +92,6 @@ class ResourceNotFoundError(DomainError):
     default_message = "The requested resource was not found."
 
 
-# 409
 class ConflictError(DomainError):
     """Base class for state and timing conflicts."""
 
@@ -135,8 +133,6 @@ class SchedulingConflictError(ConflictError):
     default_message = "The practitioner already has a consultation at that time."
 
 
-
-# 422
 class InputValidationError(DomainError):
     """The input is well-formed but breaks a rule (e.g. start time in the past)."""
 

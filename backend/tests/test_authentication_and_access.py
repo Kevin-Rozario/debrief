@@ -5,6 +5,8 @@ A missing row, someone else's consultation, and a draft the client must not
 see are all 404, with the same message.
 """
 
+from datetime import timedelta
+
 from tests.conftest import Api, expect_error, expect_ok, zulu
 
 NOT_FOUND = "The requested resource was not found."
@@ -12,8 +14,11 @@ TICKET_REQUIRED = "A valid sign-in ticket is required."
 
 
 def test_people_list_needs_no_ticket_and_hides_specialty(api: Api) -> None:
+    anonymous = expect_ok(api.client.get("/people"))
     response = api.client.get("/people", headers={"Authorization": "Bearer not-a-ticket"})
     payload = expect_ok(response)
+
+    assert anonymous["data"] == payload["data"]
 
     assert payload["message"] == "People listed."
     assert payload["meta"]["timestamp"] == zulu(api.clock.now())
@@ -62,18 +67,36 @@ def test_login_rejects_a_non_positive_person_id(api: Api) -> None:
 
 
 def test_protected_routes_reject_a_missing_or_unknown_ticket(api: Api) -> None:
-    consultation_id, _starts_at, _ends_at = api.book_ok()
-    cases = [
+    consultation_id, starts_at, ends_at = api.book_ok()
+    booking = {
+        "practitioner_id": api.asha_id,
+        "starts_at": zulu(starts_at + timedelta(days=3)),
+        "ends_at": zulu(ends_at + timedelta(days=3)),
+    }
+    note = {"body": "A note"}
+    unprotected = [
+        api.client.get("/practitioners"),
+        api.client.post("/consultations", json=booking),
         api.client.get("/consultations"),
+        api.client.get(f"/consultations/{consultation_id}"),
+        api.client.post(f"/consultations/{consultation_id}/cancel"),
+        api.client.post(f"/consultations/{consultation_id}/complete"),
+        api.client.get(f"/consultations/{consultation_id}/note"),
+        api.client.post(f"/consultations/{consultation_id}/note", json=note),
+        api.client.patch(f"/consultations/{consultation_id}/note", json=note),
+        api.client.delete(f"/consultations/{consultation_id}/note"),
+        api.client.post(f"/consultations/{consultation_id}/note/share"),
+        api.client.post(f"/consultations/{consultation_id}/note/addenda", json=note),
+    ]
+    bad_tickets = [
         api.client.get("/consultations", headers={"Authorization": "Bearer    "}),
         api.client.get("/consultations", headers={"Authorization": "Basic abc"}),
         api.client.get("/consultations", headers={"Authorization": "Bearer nope"}),
-        api.client.get("/practitioners"),
-        api.client.get(f"/consultations/{consultation_id}/note"),
     ]
-    for response in cases:
+    for response in unprotected + bad_tickets:
         payload = expect_error(response, 401, "AUTHENTICATION_REQUIRED", TICKET_REQUIRED)
         assert payload["error"]["details"] == []
+        assert payload["meta"]["timestamp"] == zulu(api.clock.now())
 
 
 def test_lowercase_bearer_scheme_is_accepted(api: Api) -> None:
@@ -98,6 +121,24 @@ def test_only_a_client_can_list_practitioners(api: Api) -> None:
     )
 
 
+def test_an_unknown_route_matches_a_missing_resource(api: Api) -> None:
+    missing = api.client.get("/consultations/999999", headers=api.priya)
+    unknown = api.client.get("/there-is-no-such-route", headers=api.priya)
+    unsupported = api.client.put("/people")
+
+    missing_payload = expect_error(missing, 404, "RESOURCE_NOT_FOUND", NOT_FOUND)
+    unknown_payload = expect_error(unknown, 404, "RESOURCE_NOT_FOUND", NOT_FOUND)
+    expect_error(
+        unsupported,
+        500,
+        "INTERNAL_SERVER_ERROR",
+        "An unexpected error occurred.",
+    )
+
+    assert unknown_payload["message"] == missing_payload["message"]
+    assert unknown_payload["error"]["details"] == []
+
+
 def test_someone_elses_consultation_matches_a_missing_one(api: Api) -> None:
     consultation_id, _starts_at, _ends_at = api.book_ok()
     missing = api.client.get("/consultations/999999", headers=api.priya)
@@ -110,6 +151,42 @@ def test_someone_elses_consultation_matches_a_missing_one(api: Api) -> None:
     own = expect_ok(api.client.get("/consultations", headers=api.priya))["data"]
     assert [item["id"] for item in own] == [consultation_id]
     assert "note" not in own[0]
+
+
+def test_another_person_cannot_act_on_the_consultation(api: Api) -> None:
+    consultation_id = api.schedule_and_complete()
+    expect_ok(api.create_note(consultation_id, "Private"))
+    missing = expect_error(
+        api.client.get("/consultations/999999", headers=api.rohan),
+        404,
+        "RESOURCE_NOT_FOUND",
+        NOT_FOUND,
+    )
+    note = {"body": "Not yours"}
+    actions = [
+        api.cancel(consultation_id, headers=api.rohan),
+        api.complete(consultation_id, headers=api.rohan),
+        api.client.get(f"/consultations/{consultation_id}/note", headers=api.rohan),
+        api.create_note(consultation_id, "Not yours", headers=api.rohan),
+        api.client.patch(
+            f"/consultations/{consultation_id}/note",
+            headers=api.rohan,
+            json=note,
+        ),
+        api.client.delete(f"/consultations/{consultation_id}/note", headers=api.rohan),
+        api.client.post(f"/consultations/{consultation_id}/note/share", headers=api.rohan),
+        api.client.post(
+            f"/consultations/{consultation_id}/note/addenda",
+            headers=api.rohan,
+            json=note,
+        ),
+        api.client.get(f"/consultations/{consultation_id}/note", headers=api.vikram),
+        api.client.delete(f"/consultations/{consultation_id}/note", headers=api.vikram),
+    ]
+    for response in actions:
+        payload = expect_error(response, 404, "RESOURCE_NOT_FOUND", NOT_FOUND)
+        assert payload["message"] == missing["message"]
+        assert payload["error"]["details"] == []
 
 
 def test_an_outsider_practitioner_is_not_told_the_consultation_exists(api: Api) -> None:

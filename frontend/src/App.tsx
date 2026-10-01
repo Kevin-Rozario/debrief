@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { useSession } from "@/auth/session.tsx";
+import { SignIn } from "@/pages/sign-in.tsx";
 
 export default function App() {
   return (
@@ -8,7 +9,7 @@ export default function App() {
       <Routes>
         <Route
           path="/"
-          element={<SignedOutRoute>Choose a person</SignedOutRoute>}
+          element={<SignedOutRoute><SignIn /></SignedOutRoute>}
         />
         <Route
           path="/consultations"

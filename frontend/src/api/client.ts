@@ -56,10 +56,28 @@ export function readTicket(): string | null {
 
 export function storeTicket(ticket: string): void {
   localStorage.setItem(TICKET_STORAGE_KEY, ticket);
+  notifyTicket();
 }
 
 export function clearTicket(): void {
   localStorage.removeItem(TICKET_STORAGE_KEY);
+  notifyTicket();
+}
+
+const ticketListeners = new Set<() => void>();
+
+export function subscribeTicket(listener: () => void) {
+  ticketListeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === TICKET_STORAGE_KEY) {
+      listener();
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    ticketListeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 export async function request<T>(
@@ -93,6 +111,12 @@ export async function request<T>(
     throw errorFromEnvelope(envelope, response.status);
   }
   return envelope.data as T;
+}
+
+function notifyTicket() {
+  for (const listener of ticketListeners) {
+    listener();
+  }
 }
 
 function apiUrl(path: string): string {

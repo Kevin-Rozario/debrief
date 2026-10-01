@@ -196,7 +196,7 @@ Rules live in the services. Repositories only read and write rows. Schemas are t
   - **Priya and Dr. Vikram Shah, three days ahead:** `cancelled`, and `cancelled_by_id` is Priya.
   - **Rohan and Dr. Vikram Shah, two days ahead:** Priya is not a participant. The hour is still `scheduled`, so a new booking with Dr. Vikram Shah in that hour overlaps.
 
-The app factory, services, routers, rule tests, example seed, and Makefile targets are committed. The latest GitHub commit on `main` is `6ba10c5`.
+The app factory, services, routers, rule tests, example seed, and Makefile targets are committed. The latest GitHub commit on `main` is `2e7ef03`.
 
 **Not started**
 

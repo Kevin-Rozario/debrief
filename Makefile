@@ -1,16 +1,26 @@
 .PHONY: setup seed api web test
 
+ifeq ($(OS),Windows_NT)
+SYS_PYTHON := python
+PYTHON := backend/.venv/Scripts/python.exe
+else
+SYS_PYTHON := python3
+PYTHON := backend/.venv/bin/python
+endif
+
 setup:
-	@echo "TODO: install backend and frontend dependencies"
+	$(SYS_PYTHON) -m venv backend/.venv
+	$(abspath $(PYTHON)) -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
 
 seed:
-	@echo "TODO: create debrief.db and load the example people"
+	cd backend && $(abspath $(PYTHON)) -m app.seed
 
 api:
-	@echo "TODO: start the API"
+	cd backend && $(abspath $(PYTHON)) -m uvicorn app.main:app --host 127.0.0.1 --port 4000 --reload
 
 web:
-	@echo "TODO: start the screen"
+	@echo "The screen is not built yet."
+	@exit 1
 
 test:
-	@echo "TODO: run the backend tests"
+	cd backend && $(abspath $(PYTHON)) -m pytest

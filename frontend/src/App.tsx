@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { useSession } from "@/auth/session.tsx";
 import { TopBar } from "@/components/top-bar.tsx";
+import { ConsultationDetail } from "@/pages/consultation-detail.tsx";
+import { ConsultationList } from "@/pages/consultation-list.tsx";
 import { SignIn } from "@/pages/sign-in.tsx";
 
 export default function App() {
@@ -20,7 +22,7 @@ export default function App() {
           path="/consultations"
           element={(
             <SignedInRoute>
-              <Placeholder label="Consultations" />
+              <ConsultationList />
             </SignedInRoute>
           )}
         />
@@ -28,7 +30,7 @@ export default function App() {
           path="/consultations/:id"
           element={(
             <SignedInRoute>
-              <Placeholder label="Visit" />
+              <ConsultationDetail />
             </SignedInRoute>
           )}
         />

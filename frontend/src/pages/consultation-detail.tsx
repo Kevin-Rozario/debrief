@@ -11,6 +11,7 @@ import {
   usePeople,
 } from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
+import { NoteRegion } from "@/components/note-region.tsx";
 import { StatusBadge } from "@/components/status-badge.tsx";
 import { TopBar } from "@/components/top-bar.tsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -184,6 +185,13 @@ function Visit({
             </div>
           )
         : null}
+      <NoteRegion
+        key={visit.id}
+        consultationId={visit.id}
+        status={visit.status}
+        role={caller.role}
+        note={visit.note}
+      />
       {actionError === null
         ? null
         : (

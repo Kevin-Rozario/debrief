@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { useSession } from "@/auth/session.tsx";
-import { TopBar } from "@/components/top-bar.tsx";
+import { BookConsultation } from "@/pages/book-consultation.tsx";
 import { ConsultationDetail } from "@/pages/consultation-detail.tsx";
 import { ConsultationList } from "@/pages/consultation-list.tsx";
 import { SignIn } from "@/pages/sign-in.tsx";
@@ -38,22 +38,13 @@ export default function App() {
           path="/book"
           element={(
             <ClientRoute>
-              <Placeholder label="Book" />
+              <BookConsultation />
             </ClientRoute>
           )}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
-  );
-}
-
-function Placeholder({ label }: { label: string }) {
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
-      <TopBar />
-      <p className="mt-8">{label}</p>
-    </main>
   );
 }
 

@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useSession } from "@/auth/session.tsx";
 import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils.ts";
 
 export function TopBar() {
   const { person, signOut } = useSession();
+  const { pathname } = useLocation();
 
   if (person === null) {
     return null;
@@ -30,7 +31,7 @@ export function TopBar() {
           >
             Sign out
           </Button>
-          {person.role === "client"
+          {person.role === "client" && pathname !== "/book"
             ? (
                 <Link
                   to="/book"

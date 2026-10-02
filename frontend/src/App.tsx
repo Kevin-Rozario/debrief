@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { useSession } from "@/auth/session.tsx";
+import { TopBar } from "@/components/top-bar.tsx";
 import { SignIn } from "@/pages/sign-in.tsx";
 
 export default function App() {
@@ -9,20 +10,48 @@ export default function App() {
       <Routes>
         <Route
           path="/"
-          element={<SignedOutRoute><SignIn /></SignedOutRoute>}
+          element={(
+            <SignedOutRoute>
+              <SignIn />
+            </SignedOutRoute>
+          )}
         />
         <Route
           path="/consultations"
-          element={<SignedInRoute>Consultations</SignedInRoute>}
+          element={(
+            <SignedInRoute>
+              <Placeholder label="Consultations" />
+            </SignedInRoute>
+          )}
         />
         <Route
           path="/consultations/:id"
-          element={<SignedInRoute>Visit</SignedInRoute>}
+          element={(
+            <SignedInRoute>
+              <Placeholder label="Visit" />
+            </SignedInRoute>
+          )}
         />
-        <Route path="/book" element={<ClientRoute>Book</ClientRoute>} />
+        <Route
+          path="/book"
+          element={(
+            <ClientRoute>
+              <Placeholder label="Book" />
+            </ClientRoute>
+          )}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function Placeholder({ label }: { label: string }) {
+  return (
+    <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
+      <TopBar />
+      <p className="mt-8">{label}</p>
+    </main>
   );
 }
 

@@ -1,13 +1,12 @@
 import type { PersonResponse } from "@/api/types.ts";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client.ts";
 import { usePeople } from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
-import { storeTheme } from "@/lib/theme.ts";
+import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Moon, Sun } from "lucide-react";
 
 const PERSON_ORDER = [
   "Priya",
@@ -21,7 +20,6 @@ export function SignIn() {
   const people = usePeople();
   const { signIn } = useSession();
   const navigate = useNavigate();
-  const theme = useAppliedTheme();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const message = error ?? loadError(people.error);
@@ -35,7 +33,8 @@ export function SignIn() {
     try {
       await signIn(person.id);
       await navigate("/consultations");
-    } catch (caught) {
+    }
+    catch (caught) {
       setPendingId(null);
       setError(caught instanceof ApiError ? caught.message : "Sign-in failed.");
     }
@@ -45,37 +44,25 @@ export function SignIn() {
     <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
       <header className="flex items-center justify-between gap-4">
         <p className="text-2xl font-bold tracking-tighter">Debrief</p>
-        <Button
-          variant="ghost"
-          className="text-sm"
-          onClick={() => storeTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? (
-            <>
-              <Sun className="size-4" /> Use light
-            </>
-          ) : (
-            <>
-              <Moon className="size-4" /> Use dark
-            </>
-          )}
-        </Button>
+        <ThemeToggle />
       </header>
       <Separator className="my-5 bg-stone-200 dark:bg-stone-800" />
       <p className="uppercase text-sm tracking-wider mt-6">
         Welcome to the Debrief
       </p>
       <h1 className="mt-4 text-4xl font-light">Choose a person</h1>
-      {message === null ? null : (
-        <p className="mt-2" role="alert">
-          {message}
-        </p>
-      )}
+      {message === null
+        ? null
+        : (
+            <p className="mt-2" role="alert">
+              {message}
+            </p>
+          )}
       <p className="mt-4 text-stone-500 dark:text-stone-400">
         No password. Picking someone signs you in as them.
       </p>
       <ul className="mt-8">
-        {orderedPeople(people.data ?? []).map((person) => (
+        {orderedPeople(people.data ?? []).map(person => (
           <li
             key={person.id}
             className="border-b border-stone-200 dark:border-stone-800"
@@ -86,16 +73,18 @@ export function SignIn() {
               aria-label={`Sign in as ${person.name}`}
               onClick={() => void choose(person)}
             >
-              {pendingId === person.id ? (
-                <span className="text-2xl">Signing in…</span>
-              ) : (
-                <>
-                  <span className="text-xl font-light">{person.name}</span>
-                  <span className="text-sm font-light text-stone-500 dark:text-stone-400">
-                    {roleLabel(person.role)}
-                  </span>
-                </>
-              )}
+              {pendingId === person.id
+                ? (
+                    <span className="text-2xl">Signing in…</span>
+                  )
+                : (
+                    <>
+                      <span className="text-xl font-light">{person.name}</span>
+                      <span className="text-sm font-light text-stone-500 dark:text-stone-400">
+                        {roleLabel(person.role)}
+                      </span>
+                    </>
+                  )}
             </Button>
           </li>
         ))}
@@ -125,27 +114,4 @@ function loadError(error: unknown) {
     return null;
   }
   return "The people list could not be loaded.";
-}
-
-function useAppliedTheme() {
-  return useSyncExternalStore(
-    subscribeThemeClass,
-    readThemeClass,
-    () => "light" as const,
-  );
-}
-
-function readThemeClass() {
-  return document.documentElement.classList.contains("dark")
-    ? ("dark" as const)
-    : ("light" as const);
-}
-
-function subscribeThemeClass(listener: () => void) {
-  const observer = new MutationObserver(listener);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-  return () => observer.disconnect();
 }

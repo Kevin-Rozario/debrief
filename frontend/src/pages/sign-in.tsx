@@ -5,6 +5,9 @@ import { ApiError } from "@/api/client.ts";
 import { usePeople } from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
 import { storeTheme } from "@/lib/theme.ts";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Moon, Sun } from "lucide-react";
 
 const PERSON_ORDER = [
   "Priya",
@@ -41,22 +44,34 @@ export function SignIn() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
       <header className="flex items-center justify-between gap-4">
-        <p className="text-lg">Debrief</p>
-        <button
-          type="button"
-          className="text-sm transition-transform hover:-translate-y-px active:translate-y-px motion-reduce:transform-none"
+        <p className="text-2xl font-bold tracking-tighter">Debrief</p>
+        <Button
+          variant="ghost"
+          className="text-sm"
           onClick={() => storeTheme(theme === "dark" ? "light" : "dark")}
         >
-          {theme === "dark" ? "Use light" : "Use dark"}
-        </button>
+          {theme === "dark" ? (
+            <>
+              <Sun className="size-4" /> Use light
+            </>
+          ) : (
+            <>
+              <Moon className="size-4" /> Use dark
+            </>
+          )}
+        </Button>
       </header>
-      <h1 className="mt-10 text-xl">Choose a person</h1>
+      <Separator className="my-5 bg-stone-200 dark:bg-stone-800" />
+      <p className="uppercase text-sm tracking-wider mt-6">
+        Welcome to the Debrief
+      </p>
+      <h1 className="mt-4 text-4xl font-light">Choose a person</h1>
       {message === null ? null : (
         <p className="mt-2" role="alert">
           {message}
         </p>
       )}
-      <p className="mt-2 text-stone-600 dark:text-stone-400">
+      <p className="mt-4 text-stone-500 dark:text-stone-400">
         No password. Picking someone signs you in as them.
       </p>
       <ul className="mt-8">
@@ -65,9 +80,9 @@ export function SignIn() {
             key={person.id}
             className="border-b border-stone-200 dark:border-stone-800"
           >
-            <button
-              type="button"
-              className="flex w-full items-baseline justify-between gap-4 py-4 text-left transition-transform hover:-translate-y-px active:translate-y-px motion-reduce:transform-none"
+            <Button
+              variant="ghost"
+              className="flex w-full items-center justify-between gap-4 py-8 text-left"
               aria-label={`Sign in as ${person.name}`}
               onClick={() => void choose(person)}
             >
@@ -75,13 +90,13 @@ export function SignIn() {
                 <span className="text-2xl">Signing in…</span>
               ) : (
                 <>
-                  <span className="text-2xl">{person.name}</span>
-                  <span className="text-sm text-stone-500">
+                  <span className="text-xl font-light">{person.name}</span>
+                  <span className="text-sm font-light text-stone-500 dark:text-stone-400">
                     {roleLabel(person.role)}
                   </span>
                 </>
               )}
-            </button>
+            </Button>
           </li>
         ))}
       </ul>

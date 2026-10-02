@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/client.ts";
 import { useBookConsultation, usePractitioners } from "@/api/queries.ts";
+import { DateTimePicker } from "@/components/datetime-picker.tsx";
 import { TopBar } from "@/components/top-bar.tsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -16,14 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatLocalInstant, parseLocalInstant } from "@/lib/time.ts";
-
-const TIME_HINT = "Use a time like 9 Oct 2026, 2:30 pm.";
+import { Separator } from "@/components/ui/separator";
 
 const stonePill
   = "rounded-full bg-stone-900 px-4 text-stone-50 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200 motion-reduce:transition-none motion-reduce:active:translate-y-0";
-
-const fieldClass = "mt-3 h-11 text-base md:text-base";
 
 export function BookConsultation() {
   const practitioners = usePractitioners();
@@ -42,16 +38,13 @@ export function BookConsultation() {
     setPractitionerId(options[0].id);
   }
 
-  function changeStart(value: string) {
+  function changeStart(value: Date) {
     setStarts(value);
-    const parsed = parseLocalInstant(value);
-    if (parsed !== null) {
-      setEnds(formatLocalInstant(oneHourLater(parsed)));
-    }
+    setEnds(oneHourLater(value));
     setFields(current => ({
       ...current,
       starts_at: undefined,
-      ends_at: parsed === null ? current.ends_at : undefined,
+      ends_at: undefined,
     }));
   }
 
@@ -61,27 +54,19 @@ export function BookConsultation() {
       return;
     }
     setAlertMessage(null);
-    const start = parseLocalInstant(starts);
-    const end = parseLocalInstant(ends);
-    const nextFields: FieldMessages = {};
     if (practitionerId === null) {
-      nextFields.practitioner_id = "Choose a practitioner.";
-    }
-    if (start === null) {
-      nextFields.starts_at = TIME_HINT;
-    }
-    if (end === null) {
-      nextFields.ends_at = TIME_HINT;
-    }
-    setFields(nextFields);
-    if (practitionerId === null || start === null || end === null) {
+      setFields(current => ({
+        ...current,
+        practitioner_id: "Choose a practitioner.",
+      }));
       return;
     }
+    setFields(current => ({ ...current, practitioner_id: undefined }));
     try {
       const consultation = await book.mutateAsync({
         practitioner_id: practitionerId,
-        starts_at: start.toISOString(),
-        ends_at: end.toISOString(),
+        starts_at: starts.toISOString(),
+        ends_at: ends.toISOString(),
       });
       await navigate(`/consultations/${consultation.id}`);
     }
@@ -102,7 +87,8 @@ export function BookConsultation() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
       <TopBar />
-      <h1 className="mt-10 text-4xl font-light">Book a consultation</h1>
+      <Separator className="my-5 bg-stone-200 dark:bg-stone-800" />
+      <h1 className="mt-4 text-4xl font-light">Book a consultation</h1>
       {loadMessage === null
         ? null
         : (
@@ -117,7 +103,10 @@ export function BookConsultation() {
               <AlertDescription>{alertMessage}</AlertDescription>
             </Alert>
           )}
-      <form className="mt-8 flex flex-col gap-8" onSubmit={event => void submit(event)}>
+      <form
+        className="mt-8 flex flex-col gap-8"
+        onSubmit={event => void submit(event)}
+      >
         <div>
           <Label htmlFor="practitioner">Practitioner</Label>
           <Select
@@ -131,14 +120,21 @@ export function BookConsultation() {
                 return;
               }
               setPractitionerId(value);
-              setFields(current => ({ ...current, practitioner_id: undefined }));
+              setFields(current => ({
+                ...current,
+                practitioner_id: undefined,
+              }));
             }}
           >
             <SelectTrigger
               id="practitioner"
               className="mt-3 h-11 w-full text-base"
               aria-invalid={fields.practitioner_id !== undefined}
-              aria-describedby={fields.practitioner_id === undefined ? undefined : "practitioner-error"}
+              aria-describedby={
+                fields.practitioner_id === undefined
+                  ? undefined
+                  : "practitioner-error"
+              }
             >
               <SelectValue />
             </SelectTrigger>
@@ -150,36 +146,33 @@ export function BookConsultation() {
               ))}
             </SelectContent>
           </Select>
-          <FieldError id="practitioner-error" message={fields.practitioner_id} />
+          <FieldError
+            id="practitioner-error"
+            message={fields.practitioner_id}
+          />
         </div>
         <div>
           <Label htmlFor="starts">Starts</Label>
-          <Input
+          <DateTimePicker
             id="starts"
             value={starts}
-            onChange={event => changeStart(event.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-            aria-invalid={fields.starts_at !== undefined}
-            aria-describedby={fields.starts_at === undefined ? undefined : "starts-error"}
-            className={fieldClass}
+            onChange={changeStart}
+            invalid={fields.starts_at !== undefined}
+            describedBy={fields.starts_at === undefined ? undefined : "starts-error"}
           />
           <FieldError id="starts-error" message={fields.starts_at} />
         </div>
         <div>
           <Label htmlFor="ends">Ends</Label>
-          <Input
+          <DateTimePicker
             id="ends"
             value={ends}
-            onChange={(event) => {
-              setEnds(event.target.value);
+            onChange={(value) => {
+              setEnds(value);
               setFields(current => ({ ...current, ends_at: undefined }));
             }}
-            autoComplete="off"
-            spellCheck={false}
-            aria-invalid={fields.ends_at !== undefined}
-            aria-describedby={fields.ends_at === undefined ? undefined : "ends-error"}
-            className={fieldClass}
+            invalid={fields.ends_at !== undefined}
+            describedBy={fields.ends_at === undefined ? undefined : "ends-error"}
           />
           <FieldError id="ends-error" message={fields.ends_at} />
         </div>
@@ -191,7 +184,13 @@ export function BookConsultation() {
   );
 }
 
-function FieldError({ id, message }: { id: string; message: string | undefined }) {
+function FieldError({
+  id,
+  message,
+}: {
+  id: string;
+  message: string | undefined;
+}) {
   if (message === undefined) {
     return null;
   }
@@ -219,13 +218,17 @@ function messagesFor(error: ApiError): FieldMessages {
 }
 
 function hasFieldMessage(messages: FieldMessages) {
-  return messages.practitioner_id !== undefined
+  return (
+    messages.practitioner_id !== undefined
     || messages.starts_at !== undefined
-    || messages.ends_at !== undefined;
+    || messages.ends_at !== undefined
+  );
 }
 
 function isField(field: string): field is keyof FieldMessages {
-  return field === "practitioner_id" || field === "starts_at" || field === "ends_at";
+  return (
+    field === "practitioner_id" || field === "starts_at" || field === "ends_at"
+  );
 }
 
 function practitionerLabel(practitioner: PractitionerResponse) {
@@ -238,8 +241,8 @@ function practitionerLabel(practitioner: PractitionerResponse) {
 function defaultTimes() {
   const start = defaultStart();
   return {
-    starts: formatLocalInstant(start),
-    ends: formatLocalInstant(oneHourLater(start)),
+    starts: start,
+    ends: oneHourLater(start),
   };
 }
 

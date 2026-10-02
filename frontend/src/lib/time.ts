@@ -31,38 +31,6 @@ export function formatLocalInstant(instant: Date): string {
   return `${formatDate(instant, true)}, ${clock.time} ${clock.meridiem}`;
 }
 
-/** The booking field format, or null when the text is not that format. */
-export function parseLocalInstant(value: string): Date | null {
-  const match = /^(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}), (\d{1,2}):(\d{2}) (am|pm)$/i.exec(value.trim());
-  if (match === null) {
-    return null;
-  }
-  const day = Number(match[1]);
-  const month = MONTHS.findIndex(name => name.toLowerCase() === match[2]?.toLowerCase());
-  const year = Number(match[3]);
-  let hour = Number(match[4]);
-  const minute = Number(match[5]);
-  const meridiem = match[6]?.toLowerCase();
-  if (month < 0 || hour < 1 || hour > 12 || minute > 59 || meridiem === undefined) {
-    return null;
-  }
-  if (meridiem === "am") {
-    hour = hour === 12 ? 0 : hour;
-  }
-  else if (hour !== 12) {
-    hour += 12;
-  }
-  const instant = new Date(year, month, day, hour, minute, 0, 0);
-  if (
-    instant.getFullYear() !== year
-    || instant.getMonth() !== month
-    || instant.getDate() !== day
-  ) {
-    return null;
-  }
-  return instant;
-}
-
 /** "23 Sep 2026" in the viewer's zone. */
 export function formatDay(iso: string): string {
   return formatDate(parseUtc(iso), true);

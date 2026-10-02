@@ -24,7 +24,8 @@ export function SignIn() {
   const navigate = useNavigate();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const message = error ?? errorMessage(people.error, "The people list could not be loaded.");
+  const message =
+    error ?? errorMessage(people.error, "The people list could not be loaded.");
 
   async function choose(person: PersonResponse) {
     if (pendingId !== null) {
@@ -35,8 +36,7 @@ export function SignIn() {
     try {
       await signIn(person.id);
       await navigate("/consultations");
-    }
-    catch (caught) {
+    } catch (caught) {
       setPendingId(null);
       setError(caught instanceof ApiError ? caught.message : "Sign-in failed.");
     }
@@ -56,18 +56,16 @@ export function SignIn() {
         Welcome to the Debrief
       </p>
       <h1 className="mt-4 text-4xl font-light">Choose a person</h1>
-      {message === null
-        ? null
-        : (
-            <p className="mt-2" role="alert">
-              {message}
-            </p>
-          )}
+      {message === null ? null : (
+        <p className="mt-2" role="alert">
+          {message}
+        </p>
+      )}
       <p className="mt-4 text-stone-500 dark:text-stone-400">
         No password. Picking someone signs you in as them.
       </p>
       <ul className="mt-8">
-        {orderedPeople(people.data ?? []).map(person => (
+        {orderedPeople(people.data ?? []).map((person) => (
           <li
             key={person.id}
             className="border-b border-stone-200 dark:border-stone-800"
@@ -78,18 +76,16 @@ export function SignIn() {
               aria-label={`Sign in as ${person.name}`}
               onClick={() => void choose(person)}
             >
-              {pendingId === person.id
-                ? (
-                    <span className="text-2xl">Signing in…</span>
-                  )
-                : (
-                    <>
-                      <span className="text-xl font-light">{person.name}</span>
-                      <span className="text-sm font-light text-stone-500 dark:text-stone-400">
-                        {roleLabel(person.role)}
-                      </span>
-                    </>
-                  )}
+              {pendingId === person.id ? (
+                <span className="text-xl">Signing in…</span>
+              ) : (
+                <>
+                  <span className="text-xl font-light">{person.name}</span>
+                  <span className="text-sm font-light text-stone-500 dark:text-stone-400">
+                    {roleLabel(person.role)}
+                  </span>
+                </>
+              )}
             </Button>
           </li>
         ))}

@@ -6,6 +6,7 @@ wrap a successful result with ``respond``.
 """
 
 import logging
+import os
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -100,6 +101,20 @@ _ERROR_RESPONSES = {
 _LOCATION_PREFIXES = frozenset({"body", "query", "path", "header", "cookie"})
 
 
+def _allowed_origins() -> list[str]:
+    """Local Vite addresses, plus ``FRONTEND_ORIGIN`` when a host sets it.
+
+    The value is the frontend origin only: scheme and host, no path. A trailing
+    slash is dropped. Leave it unset locally. ``make api`` already allows the
+    Vite dev server.
+    """
+    origins = ["http://127.0.0.1:5173", "http://localhost:5173"]
+    frontend = os.environ.get("FRONTEND_ORIGIN", "").strip().rstrip("/")
+    if frontend:
+        origins.append(frontend)
+    return origins
+
+
 def create_app(
     database: DatabaseManager | None = None,
     clock: Clock | None = None,
@@ -131,7 +146,7 @@ def create_app(
     app.state.clock = clock
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+        allow_origins=_allowed_origins(),
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Request-ID"],

@@ -188,6 +188,8 @@ Every response uses one envelope. `meta.request_id` is also the `X-Request-ID` h
 
 `GET /` and `GET /health` need no ticket. `GET /people`, `POST /auth/login`, and `POST /seed/reset` need no ticket. Every other route does.
 
+The API allows the local app at `http://127.0.0.1:5173` and `http://localhost:5173`. Set `FRONTEND_ORIGIN` to one more origin when the app is hosted elsewhere, for example `https://debrief.example`. Scheme and host only, with no path and no trailing slash.
+
 | Request                                 | Who          | Result                                      |
 | :-------------------------------------- | :----------- | :------------------------------------------ |
 | `GET /health`                           | anyone       | liveness                                    |
@@ -245,4 +247,4 @@ Routers do not repeat the rules. A missing consultation and someone else's consu
 
 `make test` gives each test a fresh SQLite file and a clock frozen at `2026-10-01T09:00:00Z`. People are inserted in the test setup, because the API cannot create a person.
 
-The 49 tests cover each refusal in the table above, the happy path for each route, a simultaneous double-book, empty text, a private draft that must not appear for the client, restoring the example data, and the example seed, including completing the past scheduled visit and cancelling the future one.
+The 50 tests cover each refusal in the table above, the happy path for each route, a simultaneous double-book, empty text, a private draft that must not appear for the client, restoring the example data, and the example seed, including completing the past scheduled visit and cancelling the future one.

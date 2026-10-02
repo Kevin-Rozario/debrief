@@ -7,7 +7,12 @@ see are all 404, with the same message.
 
 from datetime import timedelta
 
-from tests.conftest import Api, expect_error, expect_ok, zulu
+from fastapi.testclient import TestClient
+
+from app.clock import FrozenClock
+from app.database import DatabaseManager
+from app.main import create_app
+from tests.conftest import NOW, Api, expect_error, expect_ok, zulu
 
 NOT_FOUND = "The requested resource was not found."
 TICKET_REQUIRED = "A valid sign-in ticket is required."
@@ -278,3 +283,19 @@ def test_a_private_note_is_invisible_to_the_client(api: Api) -> None:
         "PERMISSION_DENIED",
         "Only the practitioner can write a note.",
     )
+
+
+def test_frontend_origin_is_allowed(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("FRONTEND_ORIGIN", "https://debrief.example/")
+    application = create_app(
+        database=DatabaseManager(tmp_path / "debrief.db"),
+        clock=FrozenClock(NOW),
+    )
+    with TestClient(application) as client:
+        hosted = client.get("/health", headers={"Origin": "https://debrief.example"})
+        local = client.get("/health", headers={"Origin": "http://127.0.0.1:5173"})
+        elsewhere = client.get("/health", headers={"Origin": "https://someone-else.example"})
+
+    assert hosted.headers["access-control-allow-origin"] == "https://debrief.example"
+    assert local.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+    assert "access-control-allow-origin" not in elsewhere.headers

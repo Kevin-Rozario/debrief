@@ -77,7 +77,7 @@ export function SignIn() {
               onClick={() => void choose(person)}
             >
               {pendingId === person.id ? (
-                <span className="text-sm">Signing in…</span>
+                <span className="text-xs">Signing in…</span>
               ) : (
                 <>
                   <span className="text-xl font-light">{person.name}</span>

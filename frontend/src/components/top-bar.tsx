@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { useSession } from "@/auth/session.tsx";
+import { ResetExampleButton } from "@/components/reset-example.tsx";
 import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { stonePill } from "@/lib/controls.ts";
@@ -25,6 +26,7 @@ export function TopBar() {
         <p className="font-medium">{`${person.name}, ${person.role}`}</p>
         <div className="flex flex-wrap items-center justify-end gap-1">
           <ThemeToggle />
+          <ResetExampleButton />
           <Button variant="ghost" className="text-sm" onClick={signOut}>
             Sign out
           </Button>

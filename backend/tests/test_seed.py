@@ -159,3 +159,34 @@ def test_meera_has_no_consultations(seeded) -> None:
     meera = _sign_in(client, ids["Meera"])
     listed = expect_ok(client.get("/consultations", headers=meera))["data"]
     assert listed == []
+
+
+def test_reset_replaces_tampered_rows_and_drops_tickets(api) -> None:
+    starts_at, ends_at = api.window()
+    api.book_ok(starts_at=starts_at, ends_at=ends_at)
+
+    payload = expect_ok(api.client.post("/seed/reset"))
+    assert payload["data"] is None
+    assert payload["message"] == "Example data restored."
+
+    people = expect_ok(api.client.get("/people"))["data"]
+    assert [person["name"] for person in people] == [
+        "Priya",
+        "Rohan",
+        "Meera",
+        "Dr. Asha Rao",
+        "Dr. Vikram Shah",
+    ]
+    by_name = {person["name"]: person for person in people}
+    assert by_name["Dr. Asha Rao"]["role"] == "practitioner"
+    assert by_name["Meera"]["role"] == "client"
+
+    expect_error(
+        api.client.get("/consultations", headers=api.priya),
+        401,
+        "AUTHENTICATION_REQUIRED",
+    )
+    priya = _sign_in(api.client, by_name["Priya"]["id"])
+    listed = expect_ok(api.client.get("/consultations", headers=priya))["data"]
+    assert _z(starts_at) not in {row["starts_at"] for row in listed}
+    assert len(listed) == 4

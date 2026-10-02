@@ -20,7 +20,7 @@ from starlette.responses import Response
 
 from app.clock import Clock
 from app.database import DatabaseManager
-from app.dependencies import set_database
+from app.dependencies import get_clock, get_database, set_database
 from app.exceptions import (
     DomainError,
     ErrorDetail as DomainErrorDetail,
@@ -35,6 +35,7 @@ from app.schemas import (
     ServiceInfo,
     UniformResponse,
 )
+from app.seed import SeedRunner
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ returned in UTC.
 OPENAPI_TAGS = [
     {
         "name": "System",
-        "description": "Name, version, and liveness. No ticket is required.",
+        "description": "Name, version, liveness, and restoring the example data. No ticket is required.",
     },
     {
         "name": "Identity",
@@ -142,7 +143,7 @@ def create_app(
 
 
 def _include_routers(app: FastAPI) -> None:
-    """Attach the identity, consultation, and note routes, plus ``/`` and ``/health``.
+    """Attach the identity, consultation, and note routes, plus ``/``, ``/health``, and ``/seed/reset``.
 
     Imported here so those modules can import ``respond`` from this one
     without a cycle while this module is still loading.
@@ -170,6 +171,14 @@ def _include_routers(app: FastAPI) -> None:
         summary="Health check",
         response_model=UniformResponse[HealthStatus],
     )
+    app.add_api_route(
+        "/seed/reset",
+        reset_example_data,
+        methods=["POST"],
+        tags=["System"],
+        summary="Restore the example data",
+        response_model=UniformResponse[None],
+    )
 
 
 def error_responses(*statuses: int) -> dict[int, dict[str, object]]:
@@ -188,6 +197,16 @@ def root(request: Request) -> JSONResponse:
 def health(request: Request) -> JSONResponse:
     """Liveness check. No ticket is required."""
     return respond(request, "Healthy.", {"status": "ok"})
+
+
+def reset_example_data(request: Request) -> JSONResponse:
+    """Replace every row with the example people and consultations.
+
+    No ticket is required. Tickets that were already issued are deleted with
+    the other rows, so the caller has to sign in again.
+    """
+    SeedRunner(get_database(request), get_clock(request)).run()
+    return respond(request, "Example data restored.")
 
 
 def respond(request: Request, message: str, data: object = None) -> JSONResponse:

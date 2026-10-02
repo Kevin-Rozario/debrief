@@ -8,7 +8,7 @@ FastAPI, SQLModel, and SQLite on the API. React, TypeScript, and Vite on the app
 
 ## Run it
 
-Python **3.14+** and Git. The app also needs Node **20.19+** (or **22.12+**) and pnpm.
+Python **3.14+** and Git. The app also needs Node **20.19+** (or **22.12+**) and npm.
 
 From the repository root, use two terminals:
 
@@ -22,17 +22,17 @@ make api
 make web
 ```
 
-| Target     | What it does                                                                 |
-| :--------- | :--------------------------------------------------------------------------- |
-| `make setup` | Creates `backend/.venv`, installs the Python packages, and runs `pnpm install` in `frontend/` |
-| `make seed`  | Replaces `backend/debrief.db` with the example people and visits             |
-| `make api`   | Serves the API at <http://127.0.0.1:4000>                                    |
-| `make web`   | Serves the app at <http://127.0.0.1:5173>                                    |
-| `make test`  | Runs the suite                                                               |
+| Target       | What it does                                                                                 |
+| :----------- | :------------------------------------------------------------------------------------------- |
+| `make setup` | Creates `backend/.venv`, installs the Python packages, and runs `npm install` in `frontend/` |
+| `make seed`  | Replaces `backend/debrief.db` with the example people and visits                             |
+| `make api`   | Serves the API at <http://127.0.0.1:4000>                                                    |
+| `make web`   | Serves the app at <http://127.0.0.1:5173>                                                    |
+| `make test`  | Runs the suite                                                                               |
 
 Open <http://127.0.0.1:5173> and pick a person. There is no password.
 
-`make seed` replaces the database and does not issue tickets. Sign in again after a re-seed.
+`make seed` replaces the database and does not issue tickets. Sign in again after a re-seed. The **Reset example** control on the sign-in page and the signed-in bar does the same thing, then returns you to the picker.
 
 ### Without Make
 
@@ -59,8 +59,8 @@ cd backend
 The app, from `frontend/`:
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 Tests, from `backend/`: `.venv/bin/python -m pytest` on macOS and Linux, or `.venv\Scripts\python.exe -m pytest` on Windows.
@@ -79,14 +79,14 @@ Sign-in lists these five people, in this order. A practitioner's specialty is a 
 
 Meera has no consultations. Everyone else is placed so each rule has a row you can open. Times are the hour you run the seed, shifted by a fixed offset, and each consultation lasts one hour. The app shows that hour in your local zone, with the UTC range on the next line. Seeded at 09:00 UTC and viewed in India (UTC+5:30), a row reads 2:30–3:30 pm and 09:00–10:00 UTC.
 
-| Who                    | When              | Status    | What to notice                                                                 |
-| :--------------------- | :---------------- | :-------- | :----------------------------------------------------------------------------- |
-| Priya, Dr. Asha Rao    | 5 days ago        | completed | Private draft. Priya's page ends after the time.                              |
-| Priya, Dr. Asha Rao    | 1 day ago         | scheduled | The start has passed, so Dr. Asha Rao can mark it completed.                   |
-| Priya, Dr. Vikram Shah | 3 days ahead      | cancelled | Cancelled by Priya. The slot does not block a new booking.                     |
-| Priya, Dr. Asha Rao    | 7 days ahead      | scheduled | Cancel still works. Completion is refused until the start.                     |
-| Rohan, Dr. Asha Rao    | 10 days ago       | completed | Shared note and one addendum. Rohan can read both.                             |
-| Rohan, Dr. Vikram Shah | 2 days ahead      | scheduled | Priya is not on it. Booking Dr. Vikram Shah in that hour overlaps.             |
+| Who                    | When         | Status    | What to notice                                                     |
+| :--------------------- | :----------- | :-------- | :----------------------------------------------------------------- |
+| Priya, Dr. Asha Rao    | 5 days ago   | completed | Private draft. Priya's page ends after the time.                   |
+| Priya, Dr. Asha Rao    | 1 day ago    | scheduled | The start has passed, so Dr. Asha Rao can mark it completed.       |
+| Priya, Dr. Vikram Shah | 3 days ahead | cancelled | Cancelled by Priya. The slot does not block a new booking.         |
+| Priya, Dr. Asha Rao    | 7 days ahead | scheduled | Cancel still works. Completion is refused until the start.         |
+| Rohan, Dr. Asha Rao    | 10 days ago  | completed | Shared note and one addendum. Rohan can read both.                 |
+| Rohan, Dr. Vikram Shah | 2 days ahead | scheduled | Priya is not on it. Booking Dr. Vikram Shah in that hour overlaps. |
 
 Lists are earliest start first. A row names the other person and never shows note text.
 
@@ -163,12 +163,12 @@ Left out on purpose: passwords, one-time codes, payments, email, and file upload
 
 The app is four views.
 
-| Route                | Who              | View                         |
-| :------------------- | :--------------- | :--------------------------- |
-| `/`                  | No ticket        | Sign-in picker               |
-| `/consultations`     | Signed-in person | Their consultations          |
+| Route                | Who              | View                          |
+| :------------------- | :--------------- | :---------------------------- |
+| `/`                  | No ticket        | Sign-in picker                |
+| `/consultations`     | Signed-in person | Their consultations           |
 | `/consultations/:id` | A participant    | Status, actions, and the note |
-| `/book`              | Client only      | Booking form                 |
+| `/book`              | Client only      | Booking form                  |
 
 A stored ticket skips `/` and opens the list. A practitioner who opens `/book` returns to the list. After a successful booking, the new visit opens.
 
@@ -186,11 +186,13 @@ Every response uses one envelope. `meta.request_id` is also the `X-Request-ID` h
 }
 ```
 
-`GET /` and `GET /health` need no ticket. `GET /people` and `POST /auth/login` need no ticket. Every other route does.
+`GET /` and `GET /health` need no ticket. `GET /people`, `POST /auth/login`, and `POST /seed/reset` need no ticket. Every other route does.
 
 | Request                                 | Who          | Result                                      |
 | :-------------------------------------- | :----------- | :------------------------------------------ |
+| `GET /health`                           | anyone       | liveness                                    |
 | `GET /people`                           | anyone       | id, name, and role, for the picker          |
+| `POST /seed/reset`                      | anyone       | replaces the database with the example rows |
 | `POST /auth/login`                      | anyone       | body is a person id; returns a ticket       |
 | `GET /practitioners`                    | client       | name and specialty                          |
 | `POST /consultations`                   | client       | practitioner, start, and end                |
@@ -243,4 +245,4 @@ Routers do not repeat the rules. A missing consultation and someone else's consu
 
 `make test` gives each test a fresh SQLite file and a clock frozen at `2026-10-01T09:00:00Z`. People are inserted in the test setup, because the API cannot create a person.
 
-The 48 tests cover each refusal in the table above, the happy path for each route, a simultaneous double-book, empty text, a private draft that must not appear for the client, and the example seed, including completing the past scheduled visit and cancelling the future one.
+The 49 tests cover each refusal in the table above, the happy path for each route, a simultaneous double-book, empty text, a private draft that must not appear for the client, restoring the example data, and the example seed, including completing the past scheduled visit and cancelling the future one.

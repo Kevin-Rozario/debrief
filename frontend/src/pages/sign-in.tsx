@@ -5,6 +5,7 @@ import { ApiError, errorMessage } from "@/api/client.ts";
 import { usePeople } from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
 import { PageColumn } from "@/components/page-column.tsx";
+import { ResetExampleButton } from "@/components/reset-example.tsx";
 import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -45,7 +46,10 @@ export function SignIn() {
     <PageColumn>
       <header className="flex items-center justify-between gap-4">
         <p className="text-2xl font-bold tracking-tighter">Debrief</p>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <ResetExampleButton />
+          <ThemeToggle />
+        </div>
       </header>
       <Separator className="my-5 bg-stone-200 dark:bg-stone-800" />
       <p className="uppercase text-sm tracking-wider mt-6">

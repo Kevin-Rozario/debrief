@@ -26,4 +26,6 @@ Thumbs.db
 # Misc
 CLAUDE.md
 PRD.md
-.cursor/
+.cursor/*
+!.cursor/plans/
+!.cursor/plans/**

@@ -2,10 +2,11 @@ import type { FormEvent } from "react";
 import type { PractitionerResponse } from "@/api/types.ts";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ApiError } from "@/api/client.ts";
+import { ApiError, errorMessage } from "@/api/client.ts";
 import { useBookConsultation, usePractitioners } from "@/api/queries.ts";
 import { DateTimePicker } from "@/components/datetime-picker.tsx";
-import { TopBar } from "@/components/top-bar.tsx";
+import { FieldMessage } from "@/components/field-message.tsx";
+import { SignedInPage } from "@/components/page-column.tsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,27 +17,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-
-const stonePill
-  = "rounded-full bg-stone-900 px-4 text-stone-50 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200 motion-reduce:transition-none motion-reduce:active:translate-y-0";
+import { stonePill } from "@/lib/controls.ts";
+import { cn } from "@/lib/utils.ts";
 
 export function BookConsultation() {
   const practitioners = usePractitioners();
   const book = useBookConsultation();
   const navigate = useNavigate();
   const options = practitioners.data ?? [];
-  const [practitionerId, setPractitionerId] = useState<number | null>(null);
+  const [chosenId, setChosenId] = useState<number | null>(null);
+  const practitionerId = chosenId ?? options[0]?.id ?? null;
   const [initialTimes] = useState(defaultTimes);
   const [starts, setStarts] = useState(initialTimes.starts);
   const [ends, setEnds] = useState(initialTimes.ends);
   const [fields, setFields] = useState<FieldMessages>({});
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const loadMessage = loadError(practitioners.error);
-
-  if (practitionerId === null && options[0] !== undefined) {
-    setPractitionerId(options[0].id);
-  }
+  const loadMessage = errorMessage(
+    practitioners.error,
+    "The practitioners could not be loaded.",
+  );
 
   function changeStart(value: Date) {
     setStarts(value);
@@ -85,9 +84,7 @@ export function BookConsultation() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
-      <TopBar />
-      <Separator className="my-5 bg-stone-200 dark:bg-stone-800" />
+    <SignedInPage back>
       <h1 className="mt-4 text-4xl font-light">Book a consultation</h1>
       {loadMessage === null
         ? null
@@ -119,7 +116,7 @@ export function BookConsultation() {
               if (typeof value !== "number") {
                 return;
               }
-              setPractitionerId(value);
+              setChosenId(value);
               setFields(current => ({
                 ...current,
                 practitioner_id: undefined,
@@ -146,10 +143,7 @@ export function BookConsultation() {
               ))}
             </SelectContent>
           </Select>
-          <FieldError
-            id="practitioner-error"
-            message={fields.practitioner_id}
-          />
+          <FieldMessage id="practitioner-error" message={fields.practitioner_id} />
         </div>
         <div>
           <Label htmlFor="starts">Starts</Label>
@@ -160,7 +154,7 @@ export function BookConsultation() {
             invalid={fields.starts_at !== undefined}
             describedBy={fields.starts_at === undefined ? undefined : "starts-error"}
           />
-          <FieldError id="starts-error" message={fields.starts_at} />
+          <FieldMessage id="starts-error" message={fields.starts_at} />
         </div>
         <div>
           <Label htmlFor="ends">Ends</Label>
@@ -174,30 +168,13 @@ export function BookConsultation() {
             invalid={fields.ends_at !== undefined}
             describedBy={fields.ends_at === undefined ? undefined : "ends-error"}
           />
-          <FieldError id="ends-error" message={fields.ends_at} />
+          <FieldMessage id="ends-error" message={fields.ends_at} />
         </div>
-        <Button type="submit" className={`w-fit ${stonePill}`}>
+        <Button type="submit" className={cn("w-fit", stonePill)}>
           {book.isPending ? "Booking…" : "Book consultation"}
         </Button>
       </form>
-    </main>
-  );
-}
-
-function FieldError({
-  id,
-  message,
-}: {
-  id: string;
-  message: string | undefined;
-}) {
-  if (message === undefined) {
-    return null;
-  }
-  return (
-    <p id={id} className="mt-2" role="alert">
-      {message}
-    </p>
+    </SignedInPage>
   );
 }
 
@@ -258,14 +235,4 @@ function defaultStart(now = new Date()) {
 
 function oneHourLater(instant: Date) {
   return new Date(instant.getTime() + 60 * 60 * 1000);
-}
-
-function loadError(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-  if (error == null) {
-    return null;
-  }
-  return "The practitioners could not be loaded.";
 }

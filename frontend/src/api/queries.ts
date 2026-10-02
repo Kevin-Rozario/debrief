@@ -82,16 +82,24 @@ export function usePeople() {
   return useQuery(peopleOptions());
 }
 
-export function usePractitioners() {
-  return useQuery(practitionersOptions());
+export function usePractitioners(enabled = true) {
+  const options = practitionersOptions();
+  return useQuery({
+    ...options,
+    enabled: enabled && options.enabled !== false,
+  });
 }
 
 export function useConsultationList() {
   return useQuery(consultationListOptions());
 }
 
-export function useConsultation(consultationId: number) {
-  return useQuery(consultationDetailOptions(consultationId));
+export function useConsultation(consultationId: number, enabled = true) {
+  const options = consultationDetailOptions(consultationId);
+  return useQuery({
+    ...options,
+    enabled: enabled && options.enabled !== false,
+  });
 }
 
 export function useBookConsultation() {

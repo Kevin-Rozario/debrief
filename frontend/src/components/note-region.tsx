@@ -8,6 +8,7 @@ import {
   useShareNote,
   useUpdateNote,
 } from "@/api/queries.ts";
+import { FieldMessage } from "@/components/field-message.tsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,15 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { redOutline, stonePill } from "@/lib/controls.ts";
 import { formatDay, formatSharedAt } from "@/lib/time.ts";
-
-const stonePill
-  = "rounded-full bg-stone-900 px-4 text-stone-50 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200 motion-reduce:transition-none motion-reduce:active:translate-y-0";
-
-const quietPress = "motion-reduce:transition-none motion-reduce:active:translate-y-0";
-
-const redOutline
-  = "border-red-800 text-red-800 hover:bg-red-50 hover:text-red-800 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-400 motion-reduce:transition-none motion-reduce:active:translate-y-0";
 
 const noteText
   = "min-h-32 text-2xl font-light leading-relaxed md:text-2xl";
@@ -241,13 +235,7 @@ function DraftNote({
         aria-describedby={fieldError === null ? undefined : "consultation-note-error"}
         className={`mt-3 ${noteText}`}
       />
-      {fieldError === null
-        ? null
-        : (
-            <p id="consultation-note-error" className="mt-2" role="alert">
-              {fieldError}
-            </p>
-          )}
+      <FieldMessage id="consultation-note-error" message={fieldError} />
       <div className="mt-4 flex flex-wrap gap-3">
         <Button type="submit" className={stonePill}>
           {saving ? "Saving…" : "Save note"}
@@ -266,7 +254,6 @@ function DraftNote({
                 <Button
                   type="button"
                   variant="outline"
-                  className={quietPress}
                   onClick={onShare}
                 >
                   {sharing ? "Sharing…" : "Share note"}
@@ -345,14 +332,8 @@ function SharedNote({
                 aria-describedby={fieldError === null ? undefined : "consultation-addendum-error"}
                 className={`mt-3 ${noteText}`}
               />
-              {fieldError === null
-                ? null
-                : (
-                    <p id="consultation-addendum-error" className="mt-2" role="alert">
-                      {fieldError}
-                    </p>
-                  )}
-              <Button type="submit" variant="outline" className={`mt-4 ${quietPress}`}>
+              <FieldMessage id="consultation-addendum-error" message={fieldError} />
+              <Button type="submit" variant="outline" className="mt-4">
                 {adding ? "Adding…" : "Add addendum"}
               </Button>
             </form>
@@ -387,7 +368,7 @@ function ShareDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap justify-end gap-3">
-          <Button type="button" variant="outline" className={quietPress} onClick={onKeepPrivate}>
+          <Button type="button" variant="outline" onClick={onKeepPrivate}>
             Keep private
           </Button>
           <Button type="button" className={stonePill} onClick={onShare}>

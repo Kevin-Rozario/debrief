@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router";
 import { useSession } from "@/auth/session.tsx";
 import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { stonePill } from "@/lib/controls.ts";
 import { cn } from "@/lib/utils.ts";
 
 export function TopBar() {
@@ -24,22 +25,12 @@ export function TopBar() {
         <p className="font-medium">{`${person.name}, ${person.role}`}</p>
         <div className="flex flex-wrap items-center justify-end gap-1">
           <ThemeToggle />
-          <Button
-            variant="ghost"
-            className="text-sm motion-reduce:transition-none motion-reduce:active:translate-y-0"
-            onClick={signOut}
-          >
+          <Button variant="ghost" className="text-sm" onClick={signOut}>
             Sign out
           </Button>
           {person.role === "client" && pathname !== "/book"
             ? (
-                <Link
-                  to="/book"
-                  className={cn(
-                    buttonVariants(),
-                    "rounded-full bg-stone-900 px-4 text-stone-50 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200 motion-reduce:transition-none motion-reduce:active:translate-y-0",
-                  )}
-                >
+                <Link to="/book" className={cn(buttonVariants(), stonePill)}>
                   Book
                 </Link>
               )

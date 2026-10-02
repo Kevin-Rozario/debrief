@@ -1,11 +1,16 @@
-import type { ConsultationResponse, PersonResponse } from "@/api/types.ts";
+import type { ConsultationResponse } from "@/api/types.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { ApiError } from "@/api/client.ts";
-import { prefetchConsultation, useConsultationList, usePeople } from "@/api/queries.ts";
+import { errorMessage } from "@/api/client.ts";
+import {
+  prefetchConsultation,
+  useConsultationList,
+  usePeople,
+} from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
+import { SignedInPage } from "@/components/page-column.tsx";
 import { StatusBadge } from "@/components/status-badge.tsx";
-import { TopBar } from "@/components/top-bar.tsx";
+import { otherPersonId, personName } from "@/lib/people.ts";
 import { formatConsultationTime } from "@/lib/time.ts";
 
 export function ConsultationList() {
@@ -13,19 +18,22 @@ export function ConsultationList() {
   const people = usePeople();
   const consultations = useConsultationList();
   const queryClient = useQueryClient();
-  const message = loadError(consultations.error);
+  const message = errorMessage(
+    consultations.error,
+    "The consultation list could not be loaded.",
+  );
   const rows = orderedConsultations(consultations.data);
   const showRows = consultations.data !== undefined && rows.length > 0;
-  const showEmpty = consultations.data !== undefined && rows.length === 0 && message === null;
+  const showEmpty
+    = consultations.data !== undefined && rows.length === 0 && message === null;
 
   if (person === null) {
     return null;
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
-      <TopBar />
-      <h1 className="mt-10 text-4xl font-light">Consultations</h1>
+    <SignedInPage>
+      <h1 className="mt-4 text-4xl font-light">Consultations</h1>
       {message === null
         ? null
         : (
@@ -38,7 +46,16 @@ export function ConsultationList() {
             <div className="mt-8">
               <p>You have no consultations.</p>
               {person.role === "client"
-                ? <p>Book one with a practitioner.</p>
+                ? (
+                    <p>
+                      <Link
+                        to="/book"
+                        className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        Book one with a practitioner.
+                      </Link>
+                    </p>
+                  )
                 : null}
             </div>
           )
@@ -47,8 +64,14 @@ export function ConsultationList() {
         ? (
             <ul className="mt-8">
               {rows.map((consultation) => {
-                const time = formatConsultationTime(consultation.starts_at, consultation.ends_at);
-                const name = otherPersonName(consultation, person, people.data ?? []);
+                const time = formatConsultationTime(
+                  consultation.starts_at,
+                  consultation.ends_at,
+                );
+                const name = personName(
+                  people.data ?? [],
+                  otherPersonId(consultation, person.id),
+                );
                 return (
                   <li
                     key={consultation.id}
@@ -70,7 +93,9 @@ export function ConsultationList() {
                       <span className="justify-self-end">
                         <StatusBadge status={consultation.status} />
                       </span>
-                      <p className="text-sm text-stone-500 dark:text-stone-400">{time.utcRange}</p>
+                      <p className="text-sm text-stone-500 dark:text-stone-400">
+                        {time.utcRange}
+                      </p>
                     </Link>
                   </li>
                 );
@@ -78,11 +103,13 @@ export function ConsultationList() {
             </ul>
           )
         : null}
-    </main>
+    </SignedInPage>
   );
 }
 
-function orderedConsultations(consultations: ConsultationResponse[] | undefined) {
+function orderedConsultations(
+  consultations: ConsultationResponse[] | undefined,
+) {
   return [...(consultations ?? [])].sort((left, right) => {
     const byStart = left.starts_at.localeCompare(right.starts_at);
     if (byStart !== 0) {
@@ -90,25 +117,4 @@ function orderedConsultations(consultations: ConsultationResponse[] | undefined)
     }
     return left.id - right.id;
   });
-}
-
-function otherPersonName(
-  consultation: ConsultationResponse,
-  caller: PersonResponse,
-  people: PersonResponse[],
-) {
-  const otherId = consultation.client_id === caller.id
-    ? consultation.practitioner_id
-    : consultation.client_id;
-  return people.find(person => person.id === otherId)?.name ?? "";
-}
-
-function loadError(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-  if (error == null) {
-    return null;
-  }
-  return "The consultation list could not be loaded.";
 }

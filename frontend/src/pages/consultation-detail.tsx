@@ -1,23 +1,27 @@
-import type { ConsultationDetailResponse, PersonResponse, PractitionerResponse } from "@/api/types.ts";
-import { useQuery } from "@tanstack/react-query";
+import type {
+  ConsultationDetailResponse,
+  PersonResponse,
+  PractitionerResponse,
+} from "@/api/types.ts";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
-import { ApiError, readTicket } from "@/api/client.ts";
+import { useParams } from "react-router";
+import { ApiError, errorMessage } from "@/api/client.ts";
 import {
-  consultationDetailOptions,
-  practitionersOptions,
   useCancelConsultation,
   useCompleteConsultation,
+  useConsultation,
   usePeople,
+  usePractitioners,
 } from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
 import { NoteRegion } from "@/components/note-region.tsx";
+import { BackToConsultations, SignedInPage } from "@/components/page-column.tsx";
 import { StatusBadge } from "@/components/status-badge.tsx";
-import { TopBar } from "@/components/top-bar.tsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { redOutline } from "@/lib/controls.ts";
+import { otherPersonId, personName } from "@/lib/people.ts";
 import { formatConsultationTime } from "@/lib/time.ts";
-import { cn } from "@/lib/utils.ts";
 
 const NOT_FOUND = "The requested resource was not found.";
 
@@ -27,16 +31,8 @@ export function ConsultationDetail() {
   const validId = Number.isInteger(consultationId) && consultationId > 0;
   const { person } = useSession();
   const people = usePeople();
-  const detailOptions = consultationDetailOptions(validId ? consultationId : 0);
-  const consultation = useQuery({
-    ...detailOptions,
-    enabled: validId && detailOptions.enabled !== false,
-  });
-  const practitionerOptions = practitionersOptions();
-  const practitioners = useQuery({
-    ...practitionerOptions,
-    enabled: person?.role === "client" && readTicket() !== null,
-  });
+  const consultation = useConsultation(validId ? consultationId : 0, validId);
+  const practitioners = usePractitioners(person?.role === "client");
   const cancelConsultation = useCancelConsultation();
   const completeConsultation = useCompleteConsultation();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -51,18 +47,17 @@ export function ConsultationDetail() {
     return null;
   }
 
-  const missing = !validId || (consultation.isError && visit === undefined && isMissing(consultation.error));
+  const missing
+    = !validId
+      || (consultation.isError && visit === undefined && isMissing(consultation.error));
   const loading = validId && visit === undefined && !consultation.isError;
+  const showVisit = !missing && !loading && visit !== undefined;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
-      <TopBar />
-      {missing
-        ? <MissingVisit />
-        : null}
-      {loading || visit === undefined || missing
-        ? null
-        : (
+    <SignedInPage back={showVisit}>
+      {missing ? <MissingVisit /> : null}
+      {showVisit
+        ? (
             <Visit
               visit={visit}
               caller={person}
@@ -87,18 +82,19 @@ export function ConsultationDetail() {
                 );
               }}
             />
-          )}
+          )
+        : null}
       {!missing && consultation.isError && visit === undefined
         ? (
             <>
               <p className="mt-10" role="alert">
-                {loadError(consultation.error)}
+                {errorMessage(consultation.error, "The consultation could not be loaded.")}
               </p>
-              <BackToList />
+              <BackToConsultations variant="button" className="mt-8" />
             </>
           )
         : null}
-    </main>
+    </SignedInPage>
   );
 }
 
@@ -126,17 +122,15 @@ function Visit({
   onComplete: () => void;
 }) {
   const time = formatConsultationTime(visit.starts_at, visit.ends_at);
-  const otherId = visit.client_id === caller.id ? visit.practitioner_id : visit.client_id;
-  const foundSpecialty = caller.role === "client"
-    ? practitioners.find(practitioner => practitioner.id === otherId)?.specialty
-    : null;
-  const specialty = foundSpecialty !== undefined && foundSpecialty !== null && foundSpecialty.trim() !== ""
-    ? foundSpecialty
-    : null;
-  const cancelledByName = visit.status === "cancelled" && visit.cancelled_by_id !== null
-    ? personName(visit.cancelled_by_id, people)
-    : "";
-  const cancelledBy = cancelledByName === "" ? null : cancelledByName;
+  const otherId = otherPersonId(visit, caller.id);
+  const specialty
+    = caller.role === "client"
+      ? practitioners.find(practitioner => practitioner.id === otherId)?.specialty?.trim() || null
+      : null;
+  const cancelledBy
+    = visit.status === "cancelled" && visit.cancelled_by_id !== null
+      ? personName(people, visit.cancelled_by_id)
+      : "";
   const scheduled = visit.status === "scheduled";
   const showCancel = scheduled;
   const showComplete = caller.role === "practitioner" && scheduled && started;
@@ -144,22 +138,34 @@ function Visit({
 
   return (
     <>
-      <div className="mt-10">
+      <div className="mt-4">
         <StatusBadge status={visit.status} />
-        <h1 className="mt-3 text-4xl font-light">{personName(otherId, people)}</h1>
+        <h1 className="mt-3 text-4xl font-light">
+          {personName(people, otherId)}
+        </h1>
         {specialty
-          ? <p className="mt-2 text-stone-500 dark:text-stone-400">{specialty}</p>
+          ? (
+              <p className="mt-2 text-stone-500 dark:text-stone-400">{specialty}</p>
+            )
           : null}
       </div>
       <div className="mt-8">
         <p>{time.detailWhen}</p>
-        <p className="text-sm text-stone-500 dark:text-stone-400">{time.utcRange}</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">
+          {time.utcRange}
+        </p>
       </div>
-      {cancelledBy
-        ? <p className="mt-8">{`Cancelled by ${cancelledBy}`}</p>
-        : null}
+      {cancelledBy === ""
+        ? null
+        : (
+            <p className="mt-8">{`Cancelled by ${cancelledBy}`}</p>
+          )}
       {showHint
-        ? <p className="mt-8">You can mark this completed once the start time has passed.</p>
+        ? (
+            <p className="mt-8">
+              You can mark this completed once the start time has passed.
+            </p>
+          )
         : null}
       {showCancel || showComplete
         ? (
@@ -168,7 +174,7 @@ function Visit({
                 ? (
                     <Button
                       variant="outline"
-                      className="border-red-800 text-red-800 hover:bg-red-50 hover:text-red-800 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-400"
+                      className={redOutline}
                       onClick={onCancel}
                     >
                       {cancelling ? "Cancelling…" : "Cancel consultation"}
@@ -207,19 +213,8 @@ function MissingVisit() {
   return (
     <>
       <p className="mt-10">{NOT_FOUND}</p>
-      <BackToList />
+      <BackToConsultations variant="button" className="mt-8" />
     </>
-  );
-}
-
-function BackToList() {
-  return (
-    <Link
-      to="/consultations"
-      className={cn(buttonVariants({ variant: "outline" }), "mt-8 w-fit")}
-    >
-      Back to consultations
-    </Link>
   );
 }
 
@@ -262,21 +257,17 @@ async function runAction(
     await start();
   }
   catch (caught) {
-    setActionError(caught instanceof ApiError ? caught.message : "The consultation could not be updated.");
+    setActionError(
+      caught instanceof ApiError
+        ? caught.message
+        : "The consultation could not be updated.",
+    );
   }
-}
-
-function personName(personId: number, people: PersonResponse[]) {
-  return people.find(person => person.id === personId)?.name ?? "";
 }
 
 function isMissing(error: unknown) {
-  return error instanceof ApiError && (error.status === 404 || error.code === "RESOURCE_NOT_FOUND");
-}
-
-function loadError(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-  return "The consultation could not be loaded.";
+  return (
+    error instanceof ApiError
+    && (error.status === 404 || error.code === "RESOURCE_NOT_FOUND")
+  );
 }

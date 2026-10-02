@@ -1,9 +1,10 @@
 import type { PersonResponse } from "@/api/types.ts";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ApiError } from "@/api/client.ts";
+import { ApiError, errorMessage } from "@/api/client.ts";
 import { usePeople } from "@/api/queries.ts";
 import { useSession } from "@/auth/session.tsx";
+import { PageColumn } from "@/components/page-column.tsx";
 import { ThemeToggle } from "@/components/theme-toggle.tsx";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +23,7 @@ export function SignIn() {
   const navigate = useNavigate();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const message = error ?? loadError(people.error);
+  const message = error ?? errorMessage(people.error, "The people list could not be loaded.");
 
   async function choose(person: PersonResponse) {
     if (pendingId !== null) {
@@ -41,7 +42,7 @@ export function SignIn() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-160 flex-col px-6 py-8">
+    <PageColumn>
       <header className="flex items-center justify-between gap-4">
         <p className="text-2xl font-bold tracking-tighter">Debrief</p>
         <ThemeToggle />
@@ -89,7 +90,7 @@ export function SignIn() {
           </li>
         ))}
       </ul>
-    </main>
+    </PageColumn>
   );
 }
 
@@ -104,14 +105,4 @@ function rank(name: string) {
 
 function roleLabel(role: PersonResponse["role"]) {
   return role === "client" ? "Client" : "Practitioner";
-}
-
-function loadError(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-  if (error == null) {
-    return null;
-  }
-  return "The people list could not be loaded.";
 }

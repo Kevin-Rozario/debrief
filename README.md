@@ -2,7 +2,7 @@
 
 A client books a consultation with a practitioner. After the session, the practitioner may write a note. The client can read that note only after the practitioner shares it.
 
-The API enforces every rule below. The screen is not built yet, so there is nothing in front of the API that could hide a mistake.
+The API enforces every rule below. The screen is the Vite app in `frontend/`.
 
 ## Status
 
@@ -11,9 +11,9 @@ The API enforces every rule below. The screen is not built yet, so there is noth
 | API (sign-in, booking, lifecycle, notes, addenda) | Done                                             |
 | Example data (`make seed`)                        | Done                                             |
 | Rule tests (48)                                   | Done                                             |
-| Screen (`frontend/`)                              | Not started. `make web` exits with that message. |
+| Screen (`frontend/`)                              | Done. `make web` serves it at <http://127.0.0.1:5173>. |
 
-Python **3.14+** and Git are enough to run the API and the tests. Node is not required until the screen exists.
+Python **3.14+** and Git run the API and the tests. The screen also needs Node **20.19+** (or **22.12+**) and pnpm.
 
 ## Quick start
 
@@ -25,9 +25,10 @@ From the repository root.
 make setup
 make seed
 make api
+make web
 ```
 
-The API listens at <http://127.0.0.1:4000>. Interactive docs are at <http://127.0.0.1:4000/docs>.
+Run `make api` and `make web` in two terminals. The API listens at <http://127.0.0.1:4000>. Interactive docs are at <http://127.0.0.1:4000/docs>. The screen listens at <http://127.0.0.1:5173>.
 
 The same steps without Make:
 
@@ -39,9 +40,11 @@ cd backend
 .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 4000 --reload
 ```
 
+From `frontend/`, the screen is `pnpm install` and then `pnpm dev`.
+
 ### Windows (PowerShell)
 
-`make setup`, `make seed`, and `make api` are the same. Make uses `python` and `backend\.venv\Scripts\python.exe` on Windows.
+`make setup`, `make seed`, `make api`, and `make web` are the same. Make uses `python` and `backend\.venv\Scripts\python.exe` on Windows. `make web` runs `pnpm dev` in `frontend/`.
 
 Without Make:
 
@@ -52,6 +55,8 @@ cd backend
 .venv\Scripts\python.exe -m app.seed
 .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 4000 --reload
 ```
+
+From `frontend/`, the screen is `pnpm install` and then `pnpm dev`.
 
 `make test` runs the suite. From `backend/`, the plain command is `.venv/bin/python -m pytest` (or `.venv\Scripts\python.exe -m pytest` on Windows).
 
@@ -90,9 +95,9 @@ This is not real security. Anyone who can call login can become any seeded perso
 
 ## Scope
 
-In this repository: two roles, the consultation lifecycle, notes with sharing and addenda, the ticket sign-in above, seed data, and tests.
+In this repository: two roles, the consultation lifecycle, notes with sharing and addenda, the ticket sign-in above, seed data, tests, and the screen in `frontend/`.
 
-Left out on purpose: passwords, one-time codes, payments, email, file upload, and a polished screen. Also left out: rescheduling, an approval step, a no-show state, checking the client's calendar, un-sharing a note, and editing or deleting an addendum.
+Left out on purpose: passwords, one-time codes, payments, email, and file upload. Also left out: rescheduling, an approval step, a no-show state, checking the client's calendar, un-sharing a note, and editing or deleting an addendum.
 
 ## Who can do what
 

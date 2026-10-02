@@ -37,9 +37,9 @@ export default function App() {
         <Route
           path="/book"
           element={(
-            <ClientRoute>
+            <SignedInRoute clientOnly>
               <BookConsultation />
-            </ClientRoute>
+            </SignedInRoute>
           )}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -59,18 +59,13 @@ function SignedOutRoute({ children }: { children: ReactNode }) {
   return children;
 }
 
-function SignedInRoute({ children }: { children: ReactNode }) {
-  const { status } = useSession();
-  if (status === "loading") {
-    return null;
-  }
-  if (status === "signed-out") {
-    return <Navigate to="/" replace />;
-  }
-  return children;
-}
-
-function ClientRoute({ children }: { children: ReactNode }) {
+function SignedInRoute({
+  children,
+  clientOnly = false,
+}: {
+  children: ReactNode;
+  clientOnly?: boolean;
+}) {
   const { status, person } = useSession();
   if (status === "loading") {
     return null;
@@ -78,7 +73,7 @@ function ClientRoute({ children }: { children: ReactNode }) {
   if (status === "signed-out") {
     return <Navigate to="/" replace />;
   }
-  if (person?.role !== "client") {
+  if (clientOnly && person?.role !== "client") {
     return <Navigate to="/consultations" replace />;
   }
   return children;

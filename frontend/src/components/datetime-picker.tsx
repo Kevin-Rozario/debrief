@@ -1,4 +1,3 @@
-import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -53,11 +52,10 @@ export function DateTimePicker({
             variant="outline"
             aria-invalid={invalid}
             aria-describedby={describedBy}
-            className="mt-3 h-11 w-full justify-start px-3 text-base font-normal motion-reduce:transition-none motion-reduce:active:translate-y-0"
+            className="mt-3 h-11 w-full justify-start px-3 text-base font-normal"
           />
         )}
       >
-        <CalendarIcon />
         {formatLocalInstant(value)}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">

@@ -9,7 +9,7 @@ export function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      className="text-sm motion-reduce:transition-none motion-reduce:active:translate-y-0"
+      className="text-sm"
       onClick={() => storeTheme(theme === "dark" ? "light" : "dark")}
     >
       {theme === "dark"

@@ -1,21 +1,8 @@
-# Python (backend)
-__pycache__/
-*.py[cod]
-.venv/
-*.egg-info/
+# Python
 .pytest_cache/
 
-# Node / Vite (frontend)
-node_modules/
-dist/
-*.tsbuildinfo
-npm-debug.log*
-
-# Local SQLite database (recreated by the seed script)
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
+# Node
+.pnpm-store/
 
 # Editors and operating systems
 .idea/
@@ -23,7 +10,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Misc
+# Local notes
 CLAUDE.md
 PRD.md
 .cursor/

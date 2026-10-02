@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Local SQLite database (recreated by the seed script)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

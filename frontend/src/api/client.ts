@@ -130,9 +130,9 @@ function notifyTicket() {
 }
 
 function apiUrl(path: string): string {
-  const base = import.meta.env.VITE_API_URL;
+  const base = import.meta.env.VITE_BACKEND_ORIGIN;
   if (typeof base !== "string" || base.trim() === "") {
-    throw new Error("VITE_API_URL is not set.");
+    throw new Error("VITE_BACKEND_ORIGIN is not set.");
   }
   const prefix = base.replace(/\/$/, "");
   return `${prefix}${path.startsWith("/") ? path : `/${path}`}`;
@@ -143,9 +143,9 @@ function isSignedOut(
   envelope: UniformResponse<unknown>,
 ): boolean {
   return (
-    httpStatus === 401
-    || envelope.error?.status === 401
-    || envelope.error?.code === "AUTHENTICATION_REQUIRED"
+    httpStatus === 401 ||
+    envelope.error?.status === 401 ||
+    envelope.error?.code === "AUTHENTICATION_REQUIRED"
   );
 }
 
@@ -175,8 +175,7 @@ async function parseEnvelope<T>(
   let parsed: unknown;
   try {
     parsed = await response.json();
-  }
-  catch {
+  } catch {
     throw new ApiError(
       "The server returned a response that was not JSON.",
       codeForStatus(response.status),
@@ -212,8 +211,8 @@ function isUniformResponse(value: unknown): value is UniformResponse<unknown> {
     return false;
   }
   return (
-    typeof value.meta.request_id === "string"
-    && typeof value.meta.timestamp === "string"
+    typeof value.meta.request_id === "string" &&
+    typeof value.meta.timestamp === "string"
   );
 }
 
